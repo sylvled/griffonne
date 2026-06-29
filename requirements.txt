@@ -1,0 +1,12 @@
+faster-whisper
+sounddevice
+pynput
+pyperclip
+numpy
+pystray
+pillow
+# GPU (CUDA 12) — retirer ces 2 lignes pour une install CPU pure
+nvidia-cublas-cu12
+nvidia-cudnn-cu12
+# Correction automatique : nécessite Ollama installé séparément
+#   https://ollama.com  +  `ollama pull qwen2.5:3b`

@@ -1,0 +1,16 @@
+# Environnement Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Réglages & état runtime (spécifiques à la machine, peuvent contenir un jeton)
+config.json
+vocabulary.json
+
+# Logs / fichiers temporaires
+*.log
+install_log.txt
+smoke_log.txt
+ollama_pull.txt
+server_log.txt
