@@ -4,7 +4,6 @@ propre à l'utilisateur (fourni en liste). Tout est local et gratuit.
 
 Si Ollama est indisponible, on renvoie le texte d'origine (jamais de plantage)."""
 import json
-import re
 import urllib.request
 
 _RULES_CONSERVATIVE = (
@@ -46,9 +45,13 @@ def _build_system(mode: str, vocabulary: list[str] | None) -> str:
 
 class Corrector:
     def __init__(self, model="qwen2.5:3b", mode="conservative",
-                 url="http://localhost:11434", enabled=True, vocabulary=None):
+                 url="http://127.0.0.1:11434", enabled=True, vocabulary=None,
+                 keep_alive="30m"):
         self.model = model
-        self.url = url.rstrip("/")
+        # « localhost » coûte ~2 s par appel sous Windows (tentative IPv6 ::1
+        # avant repli IPv4). On normalise systématiquement.
+        self.url = url.rstrip("/").replace("//localhost:", "//127.0.0.1:")
+        self.keep_alive = keep_alive
         self.enabled = enabled
         self.mode = mode
         self.vocabulary = vocabulary or []
@@ -63,6 +66,7 @@ class Corrector:
             ],
             "stream": False,
             "options": {"temperature": 0},
+            "keep_alive": self.keep_alive,  # évite le rechargement du modèle
         }
         data = json.dumps(payload).encode("utf-8")
         req = urllib.request.Request(
@@ -82,16 +86,10 @@ class Corrector:
             print(f"[llm] correction ignorée ({exc!r})")
             return text
         out = out.strip().strip('"').strip()
-        out = self._enforce_vocab(out) if out else out
+        if out:
+            from .clean import enforce_vocab
+            out = enforce_vocab(out, self.vocabulary)
         return out or text
-
-    def _enforce_vocab(self, text: str) -> str:
-        """Force l'orthographe/casse exacte des termes du vocabulaire
-        (ex. « Vera » -> « VERA », « claude code » -> « Claude Code »)."""
-        for term in self.vocabulary:
-            text = re.sub(rf"\b{re.escape(term)}\b", term, text,
-                          flags=re.IGNORECASE)
-        return text
 
     def warmup(self) -> None:
         """Charge le modèle en VRAM pour éviter le coût à froid au 1er usage."""

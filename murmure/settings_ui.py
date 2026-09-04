@@ -9,7 +9,7 @@ from .devices import list_microphones
 MODELS = ["large-v3-turbo", "large-v3", "medium", "small", "base"]
 DEVICES = ["auto", "cuda", "cpu"]
 LLM_MODES = ["conservative", "light"]
-BACKENDS = ["local", "remote"]
+BACKENDS = ["local", "remote", "auto"]
 
 
 class SettingsWindow:

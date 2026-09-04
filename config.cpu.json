@@ -1,0 +1,9 @@
+{
+  "backend": "local",
+  "model": "small",
+  "device": "cpu",
+  "compute_type": "int8",
+  "llm_correct": false,
+  "hotkey": "ctrl+alt+m",
+  "quit_hotkey": ""
+}

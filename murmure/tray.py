@@ -74,7 +74,7 @@ class TrayApp:
 
     def _quit(self, icon=None, item=None):
         try:
-            self.controller.shutdown()
+            self.controller.shutdown("menu Quitter")
         finally:
             if self.icon is not None:
                 self.icon.stop()

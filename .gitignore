@@ -14,3 +14,8 @@ install_log.txt
 smoke_log.txt
 ollama_pull.txt
 server_log.txt
+murmure_autostart.log
+*.prev.log
+srv.log
+srv.err
+bench.wav

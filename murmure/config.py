@@ -10,7 +10,7 @@ DEFAULTS = {
     "enabled": True,             # dictée active (pilotable depuis le tray)
 
     # --- moteur ---
-    "backend": "local",          # "local" ou "remote"
+    "backend": "local",          # "local" | "remote" | "auto" (distant si joignable)
     "model": "large-v3-turbo",   # large-v3-turbo | large-v3 | small ...
     "device": "auto",            # "auto" | "cuda" | "cpu" (mode dégradé)
     "compute_type": "auto",      # "auto" | float16 (gpu) | int8 (cpu)
@@ -41,8 +41,12 @@ DEFAULTS = {
     },
 
     # --- activation ---
-    "hotkey": "ctrl+alt+space",  # raccourci global (toggle)
-    "quit_hotkey": "ctrl+alt+q",
+    "hotkey": "ctrl+alt+m",      # raccourci global (toggle). PAS ctrl+alt+space :
+                                 # conflit avec la barre de commande Claude Desktop.
+    # Vide = désactivé (recommandé). Un raccourci global « quitter » se
+    # déclenche trop facilement et arrête l'app sans prévenir.
+    # Pour quitter : menu de l'icône « Quitter », ou Ctrl+C en mode console.
+    "quit_hotkey": "",
 
     # --- entrée / sortie ---
     "mic_device": None,          # index/sous-chaîne du micro, ou null = défaut
@@ -56,11 +60,15 @@ DEFAULTS = {
     "llm_model": "qwen2.5:3b",    # modèle Ollama (petit = rapide)
     "llm_mode": "conservative",   # "conservative" ou "light" (nettoyage style)
     "llm_min_words": 2,           # n'appelle pas le LLM en dessous (trop court)
-    "ollama_url": "http://localhost:11434",
+    # IMPORTANT : 127.0.0.1 et NON localhost. Sous Windows, « localhost » tente
+    # d'abord IPv6 (::1) alors qu'Ollama n'écoute qu'en IPv4 -> ~2 s perdues
+    # par appel avant le repli. Mesuré : 2,36 s -> 0,16 s.
+    "ollama_url": "http://127.0.0.1:11434",
+    "llm_keep_alive": "30m",      # garde le modèle en VRAM (évite les rechargements)
 
     # --- mode distant ---
     # CLIENT : où joindre le serveur de transcription.
-    "remote_url": "http://localhost:8765",
+    "remote_url": "http://127.0.0.1:8765",
     "remote_token": "",          # jeton partagé (obligatoire si exposé au réseau)
     # SERVEUR : interface/port d'écoute.
     "server_host": "0.0.0.0",

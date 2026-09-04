@@ -35,6 +35,7 @@ class LocalEngine:
         self.language = language
         self.clean_fillers = clean_fillers
         self.replacements = replacements
+        self.vocabulary = vocabulary or []
         # l'amorce Whisper = phrase de base + vocabulaire utilisateur
         prompt = initial_prompt or ""
         if vocabulary:
@@ -65,6 +66,9 @@ class LocalEngine:
             initial_prompt=self.initial_prompt,
         )
         text = "".join(seg.text for seg in segments).strip()
-        from .clean import clean_text
-        return clean_text(text, remove_fillers=self.clean_fillers,
+        from .clean import clean_text, enforce_vocab
+        text = clean_text(text, remove_fillers=self.clean_fillers,
                           replacements=self.replacements)
+        # casse exacte du vocabulaire : appliquée ici pour rester effective
+        # même quand la correction LLM est désactivée (mode CPU / PC pro)
+        return enforce_vocab(text, self.vocabulary)

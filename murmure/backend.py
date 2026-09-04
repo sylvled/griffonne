@@ -30,6 +30,7 @@ class LocalBackend:
             self.corrector = Corrector(
                 model=cfg["llm_model"], mode=cfg["llm_mode"],
                 url=cfg["ollama_url"], vocabulary=vocabulary,
+                keep_alive=cfg.get("llm_keep_alive", "30m"),
             )
         self.llm_min_words = cfg.get("llm_min_words", 0)
 
@@ -60,12 +61,16 @@ class RemoteBackend:
             print(f"[remote] serveur injoignable pour l'instant ({exc!r})")
 
     def process(self, audio: np.ndarray) -> str:
-        data = np.ascontiguousarray(audio, dtype=np.float32).tobytes()
+        # int16 plutôt que float32 : 2x moins de données sur le réseau, sans
+        # perte audible pour de la voix (938 Ko -> 469 Ko pour 15 s).
+        pcm = np.clip(np.asarray(audio, dtype=np.float32), -1.0, 1.0)
+        data = (pcm * 32767.0).astype(np.int16).tobytes()
         req = urllib.request.Request(
             self.url + "/transcribe", data=data,
             headers={
                 "Content-Type": "application/octet-stream",
                 "X-Token": self.token,
+                "X-Audio-Format": "pcm_s16le",
             },
         )
         with urllib.request.urlopen(req, timeout=120) as r:
@@ -73,7 +78,25 @@ class RemoteBackend:
         return resp.get("text", "")
 
 
+def remote_reachable(cfg: dict, timeout: float = 2.0) -> bool:
+    """Le serveur GPU répond-il ? (court timeout : sur VPN d'entreprise, il est
+    généralement injoignable, on ne veut pas bloquer le démarrage)."""
+    try:
+        url = cfg["remote_url"].rstrip("/") + "/health"
+        with urllib.request.urlopen(url, timeout=timeout) as r:
+            return json.loads(r.read().decode("utf-8")).get("status") == "ok"
+    except Exception:  # noqa: BLE001
+        return False
+
+
 def make_backend(cfg: dict, vocabulary: list[str]):
-    if cfg.get("backend") == "remote":
+    mode = cfg.get("backend", "local")
+    if mode == "remote":
         return RemoteBackend(cfg)
+    if mode == "auto":
+        # bascule automatique : serveur GPU si joignable, sinon local (VPN...)
+        if remote_reachable(cfg):
+            print("[murmure] serveur GPU joignable -> mode distant")
+            return RemoteBackend(cfg)
+        print("[murmure] serveur GPU injoignable (VPN ?) -> repli local")
     return LocalBackend(cfg, vocabulary)

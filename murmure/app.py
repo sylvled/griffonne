@@ -7,7 +7,7 @@ import time
 
 from pynput import keyboard as pk
 
-from . import config, vocab_builder
+from . import config, vocab_builder, win
 from .audio import Recorder
 from .backend import make_backend
 from .devices import resolve_mic
@@ -37,6 +37,7 @@ class Murmure:
         self.vocabulary: list[str] = []
         self.state = LOADING
         self._listener: pk.GlobalHotKeys | None = None
+        self._target_hwnd = None  # fenêtre cible mémorisée à l'arrêt de l'écoute
         self._quit = threading.Event()
 
     # ------------------------------------------------------------------ utils
@@ -71,10 +72,13 @@ class Murmure:
         self._set_state(DISABLED if not self.cfg["enabled"] else IDLE)
 
     def _start_hotkeys(self) -> None:
-        hotkeys = {
-            _to_pynput_hotkey(self.cfg["hotkey"]): self._safe_toggle,
-            _to_pynput_hotkey(self.cfg["quit_hotkey"]): self.shutdown,
-        }
+        hotkeys = {_to_pynput_hotkey(self.cfg["hotkey"]): self._safe_toggle}
+        # Raccourci « quitter » désactivé par défaut : un raccourci global qui
+        # tue l'app silencieusement est un piège (voisin du raccourci dictée).
+        quit_key = (self.cfg.get("quit_hotkey") or "").strip()
+        if quit_key:
+            hotkeys[_to_pynput_hotkey(quit_key)] = (
+                lambda: self.shutdown("raccourci quitter"))
         self._listener = pk.GlobalHotKeys(hotkeys)
         self._listener.start()
 
@@ -98,6 +102,9 @@ class Murmure:
             self._cue("start")
             print("[murmure] 🎙️  enregistrement...")
         elif self.state == RECORDING:
+            # mémorise MAINTENANT la fenêtre visée (le focus est correct à
+            # l'instant où l'utilisateur arrête l'écoute)
+            self._target_hwnd = win.get_foreground_window()
             self._set_state(BUSY)
             self._cue("stop")
             threading.Thread(target=self._finish, daemon=True).start()
@@ -114,8 +121,11 @@ class Murmure:
             print(f"[murmure] erreur : {exc!r}")
             self._set_state(IDLE)
             return
-        print(f"[murmure] ✅ ({time.time() - t0:.1f}s) : {text!r}")
+        print(f"[murmure] ✅ ({time.time() - t0:.1f}s) : {text}")
         if text:
+            if self.cfg["auto_paste"] and self._target_hwnd:
+                win.focus_window(self._target_hwnd)  # recible la bonne fenêtre
+                time.sleep(0.12)
             output_text(text, self.cfg["auto_paste"])
             if self.cfg["backend"] == "local":  # apprentissage local
                 vocab_builder.learn(text, self.cfg)
@@ -131,7 +141,10 @@ class Murmure:
         self.backend = None
         self.start()
 
-    def shutdown(self) -> None:
+    def shutdown(self, reason: str = "demande") -> None:
+        # toujours tracer la cause : un arrêt silencieux est indiagnosticable
+        print(f"[murmure] ARRÊT ({reason}) à "
+              f"{time.strftime('%d/%m/%Y %H:%M:%S')}", flush=True)
         if self._listener is not None:
             self._listener.stop()
         self._quit.set()

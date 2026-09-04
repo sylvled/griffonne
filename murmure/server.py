@@ -39,7 +39,11 @@ def _make_handler(backend: LocalBackend, token: str):
                 return
             n = int(self.headers.get("Content-Length", 0))
             raw = self.rfile.read(n) if n else b""
-            audio = np.frombuffer(raw, dtype=np.float32)
+            # int16 par défaut côté client récent ; float32 accepté (compat.)
+            if self.headers.get("X-Audio-Format") == "pcm_s16le":
+                audio = np.frombuffer(raw, dtype=np.int16).astype(np.float32) / 32768.0
+            else:
+                audio = np.frombuffer(raw, dtype=np.float32)
             try:
                 text = backend.process(audio)
             except Exception as exc:  # noqa: BLE001

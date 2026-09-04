@@ -1,0 +1,9 @@
+# Installation pour PC SANS carte graphique (mode CPU).
+# Volontairement SANS les paquets nvidia-* (1,9 Go inutiles ici).
+faster-whisper
+sounddevice
+pynput
+pyperclip
+numpy
+pystray
+pillow

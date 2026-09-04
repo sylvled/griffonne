@@ -18,6 +18,17 @@ _STUTTER_RE = re.compile(
 )
 
 
+def enforce_vocab(text: str, vocabulary: list[str] | None) -> str:
+    """Force l'orthographe/casse exacte des termes du vocabulaire
+    (« vera » -> « VERA », « claude code » -> « Claude Code »).
+    Déterministe et instantané : fonctionne SANS LLM (utile en mode CPU)."""
+    if not text or not vocabulary:
+        return text
+    for term in vocabulary:
+        text = re.sub(rf"\b{re.escape(term)}\b", term, text, flags=re.IGNORECASE)
+    return text
+
+
 def _apply_replacements(s: str, replacements: dict | None) -> str:
     if not replacements:
         return s
