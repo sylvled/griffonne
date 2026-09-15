@@ -1,7 +1,7 @@
-"""Contrôleur Murmure : raccourci global (toggle), capture micro, traitement
+"""Contrôleur Griffonne : raccourci global (toggle), capture micro, traitement
 via un backend (local ou distant), auto-collage et apprentissage du vocabulaire.
 
-Utilisable en mode console (`python -m murmure.app`) ou piloté par le tray."""
+Utilisable en mode console (`python -m griffonne.app`) ou piloté par le tray."""
 import threading
 import time
 
@@ -28,7 +28,7 @@ def _to_pynput_hotkey(combo: str) -> str:
     return "+".join(parts)
 
 
-class Murmure:
+class Griffonne:
     def __init__(self, cfg: dict | None = None, on_status=None):
         self.cfg = cfg or config.load()
         self.on_status = on_status or (lambda s: None)
@@ -62,13 +62,13 @@ class Murmure:
         self._set_state(LOADING)
         eng = self.cfg.get("engine", "whisper")
         desc = "Parakeet 0.6B" if eng == "parakeet" else f"Whisper {self.cfg['model']}"
-        print(f"[murmure] backend '{self.cfg['backend']}' — moteur {desc}...")
+        print(f"[griffonne] backend '{self.cfg['backend']}' — moteur {desc}...")
         t0 = time.time()
         self.vocabulary = vocab_builder.build(self.cfg)
-        print(f"[murmure] vocabulaire : {len(self.vocabulary)} termes")
+        print(f"[griffonne] vocabulaire : {len(self.vocabulary)} termes")
         self.backend = make_backend(self.cfg, self.vocabulary)
         self.backend.warmup()
-        print(f"[murmure] PRÊT en {time.time() - t0:.1f}s "
+        print(f"[griffonne] PRÊT en {time.time() - t0:.1f}s "
               f"(device {self.backend.device}) — raccourci {self.cfg['hotkey']}")
         self._set_state(DISABLED if not self.cfg["enabled"] else IDLE)
 
@@ -101,7 +101,7 @@ class Murmure:
             self._set_state(RECORDING)
             self.recorder.start()
             self._cue("start")
-            print("[murmure] 🎙️  enregistrement...")
+            print("[griffonne] 🎙️  enregistrement...")
         elif self.state == RECORDING:
             # mémorise MAINTENANT la fenêtre visée (le focus est correct à
             # l'instant où l'utilisateur arrête l'écoute)
@@ -114,15 +114,15 @@ class Murmure:
     def _finish(self) -> None:
         audio = self.recorder.stop()
         dur = len(audio) / self.recorder.sr
-        print(f"[murmure] ⏳ traitement ({dur:.1f}s d'audio)...")
+        print(f"[griffonne] ⏳ traitement ({dur:.1f}s d'audio)...")
         t0 = time.time()
         try:
             text = self.backend.process(audio)
         except Exception as exc:  # noqa: BLE001
-            print(f"[murmure] erreur : {exc!r}")
+            print(f"[griffonne] erreur : {exc!r}")
             self._set_state(IDLE)
             return
-        print(f"[murmure] ✅ ({time.time() - t0:.1f}s) : {text}")
+        print(f"[griffonne] ✅ ({time.time() - t0:.1f}s) : {text}")
         if text:
             if self.cfg["auto_paste"] and self._target_hwnd:
                 win.focus_window(self._target_hwnd)  # recible la bonne fenêtre
@@ -135,7 +135,7 @@ class Murmure:
     # --------------------------------------------------------------- contrôle
     def reload(self, new_cfg: dict) -> None:
         """Applique une nouvelle config (réglages) : on recharge tout."""
-        print("[murmure] rechargement de la configuration...")
+        print("[griffonne] rechargement de la configuration...")
         if self._listener is not None:
             self._listener.stop()
         self.cfg = new_cfg
@@ -144,7 +144,7 @@ class Murmure:
 
     def shutdown(self, reason: str = "demande") -> None:
         # toujours tracer la cause : un arrêt silencieux est indiagnosticable
-        print(f"[murmure] ARRÊT ({reason}) à "
+        print(f"[griffonne] ARRÊT ({reason}) à "
               f"{time.strftime('%d/%m/%Y %H:%M:%S')}", flush=True)
         if self._listener is not None:
             self._listener.stop()
@@ -154,11 +154,11 @@ class Murmure:
         """Mode console bloquant (run.bat)."""
         self.start()
         self._quit.wait()
-        print("\n[murmure] arrêt.")
+        print("\n[griffonne] arrêt.")
 
 
 def main() -> None:
-    Murmure().run_console()
+    Griffonne().run_console()
 
 
 if __name__ == "__main__":

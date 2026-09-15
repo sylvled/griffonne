@@ -1,5 +1,5 @@
 @echo off
-REM ===== Installation de Murmure sur un PC SANS carte graphique =====
+REM ===== Installation de Griffonne sur un PC SANS carte graphique =====
 cd /d "%~dp0"
 echo.
 echo [1/3] Creation de l'environnement Python...

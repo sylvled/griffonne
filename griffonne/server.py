@@ -3,7 +3,7 @@
 Reçoit l'audio brut (float32 mono 16 kHz) en POST /transcribe, renvoie le texte
 final (transcrit + corrigé) en JSON. Authentification par jeton partagé.
 
-Lancement :  python -m murmure.server     (ou serve.bat)
+Lancement :  python -m griffonne.server     (ou serve.bat)
 """
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer

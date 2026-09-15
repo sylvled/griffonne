@@ -1,4 +1,4 @@
-' Lance Murmure SANS fenetre visible (demarrage automatique Windows).
+' Lance Griffonne SANS fenetre visible (demarrage automatique Windows).
 ' Passe par run_autostart.bat pour conserver un log de diagnostic.
 Set fso = CreateObject("Scripting.FileSystemObject")
 base = fso.GetParentFolderName(WScript.ScriptFullName)

@@ -18,7 +18,7 @@ class SettingsWindow:
         self.cfg = dict(cfg)
         self.on_save = on_save
         self.win = tk.Toplevel(master) if master else tk.Tk()
-        self.win.title("Murmure — Réglages")
+        self.win.title("Griffonne — Réglages")
         self.win.geometry("560x560")
         self.vars: dict = {}
 

@@ -1,4 +1,4 @@
-# Lance Murmure (dictée vocale locale)
+# Lance Griffonne (dictée vocale locale)
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
-& "$PSScriptRoot\.venv\Scripts\python.exe" -m murmure.app
+& "$PSScriptRoot\.venv\Scripts\python.exe" -m griffonne.app

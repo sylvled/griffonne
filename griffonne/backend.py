@@ -98,7 +98,7 @@ def make_backend(cfg: dict, vocabulary: list[str]):
     if mode == "auto":
         # bascule automatique : serveur GPU si joignable, sinon local (VPN...)
         if remote_reachable(cfg):
-            print("[murmure] serveur GPU joignable -> mode distant")
+            print("[griffonne] serveur GPU joignable -> mode distant")
             return RemoteBackend(cfg)
-        print("[murmure] serveur GPU injoignable (VPN ?) -> repli local")
+        print("[griffonne] serveur GPU injoignable (VPN ?) -> repli local")
     return LocalBackend(cfg, vocabulary)

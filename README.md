@@ -1,4 +1,4 @@
-# Murmure 🎙️
+# Griffonne 🎙️
 
 Dictée vocale **locale, rapide et gratuite** pour Windows. Un raccourci, tu
 parles, et le texte — transcrit, corrigé, mis en forme — est collé dans
@@ -67,7 +67,7 @@ Tout se règle sans éditer de fichier :
 - **Distant** : URL et jeton du serveur (client), interface et port (serveur).
 
 La configuration est stockée dans `config.json` (généré, ignoré par Git).
-Les valeurs par défaut sont dans `murmure/config.py`.
+Les valeurs par défaut sont dans `griffonne/config.py`.
 
 ---
 
@@ -151,7 +151,7 @@ nature des données dictées avant de les faire transiter par une autre machine.
 ## Comparaison avec murmure.app
 
 [murmure.app](https://murmure.app) (Kieirra / Al1x-ai, AGPL v3) est un projet
-indépendant, homonyme par coïncidence, qui poursuit le même objectif. Les deux
+indépendant qui poursuit le même objectif. Les deux
 ont été comparés sur **le même corpus** : 5 phrases françaises (voix de
 synthèse, 6 à 9 s), transcrites par l'API locale de murmure.app et par ce
 projet, avec le taux d'erreur mot (WER) contre le texte de référence.
@@ -205,7 +205,7 @@ Cinq phrases en voix de synthèse : c'est indicatif, pas définitif.
 - **Latence anormale (~2 s de plus par dictée)** : l'URL d'Ollama doit être
   `http://127.0.0.1:11434`, pas `localhost` — sous Windows, `localhost` tente
   d'abord IPv6 alors qu'Ollama n'écoute qu'en IPv4.
-- **L'app s'arrête sans raison** : consulter `murmure_autostart.log`, chaque
+- **L'app s'arrête sans raison** : consulter `griffonne_autostart.log`, chaque
   arrêt y est tracé avec sa cause.
 
 ---
@@ -214,15 +214,15 @@ Cinq phrases en voix de synthèse : c'est indicatif, pas définitif.
 
 | Fichier | Rôle |
 |---|---|
-| `murmure/app.py` | Contrôleur : raccourci, capture, orchestration, rechargement |
-| `murmure/engine.py` | Moteurs Whisper (faster-whisper) et Parakeet (onnx-asr) |
-| `murmure/llm.py` | Correction par LLM local (Ollama) |
-| `murmure/clean.py` | Nettoyage déterministe, orthographe du vocabulaire |
-| `murmure/vocab_builder.py` | Vocabulaire auto-appris (+ récolte optionnelle) |
-| `murmure/backend.py` | Local / distant / auto |
-| `murmure/server.py` | Serveur de transcription distant |
-| `murmure/tray.py`, `settings_ui.py` | Icône et réglages |
-| `murmure/devices.py`, `audio.py`, `win.py` | GPU, micro, capture, fenêtre cible |
+| `griffonne/app.py` | Contrôleur : raccourci, capture, orchestration, rechargement |
+| `griffonne/engine.py` | Moteurs Whisper (faster-whisper) et Parakeet (onnx-asr) |
+| `griffonne/llm.py` | Correction par LLM local (Ollama) |
+| `griffonne/clean.py` | Nettoyage déterministe, orthographe du vocabulaire |
+| `griffonne/vocab_builder.py` | Vocabulaire auto-appris (+ récolte optionnelle) |
+| `griffonne/backend.py` | Local / distant / auto |
+| `griffonne/server.py` | Serveur de transcription distant |
+| `griffonne/tray.py`, `settings_ui.py` | Icône et réglages |
+| `griffonne/devices.py`, `audio.py`, `win.py` | GPU, micro, capture, fenêtre cible |
 
-Points d'entrée : `python -m murmure` (app), `python -m murmure.app`
-(console), `python -m murmure.server` (serveur).
+Points d'entrée : `python -m griffonne` (app), `python -m murmure.app`
+(console), `python -m griffonne.server` (serveur).

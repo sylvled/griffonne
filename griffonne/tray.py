@@ -1,14 +1,14 @@
 """Application avec icône dans la barre des tâches (pystray) + fenêtre de
 réglages (tkinter). C'est le mode « application » complet.
 
-Lancement : python -m murmure   (ou Murmure.vbs / run_tray.bat)
+Lancement : python -m griffonne   (ou Griffonne.vbs / run_tray.bat)
 Repli : si l'UI échoue, on bascule en mode console.
 """
 import threading
 import tkinter as tk
 
 from . import config
-from .app import BUSY, DISABLED, IDLE, LOADING, RECORDING, Murmure
+from .app import BUSY, DISABLED, IDLE, LOADING, RECORDING, Griffonne
 
 _COLORS = {
     LOADING:   (190, 170, 60),
@@ -39,7 +39,7 @@ class TrayApp:
         self.root = tk.Tk()
         self.root.withdraw()  # fenêtre racine cachée
         self.icon = None
-        self.controller = Murmure(self.cfg, on_status=self._on_status)
+        self.controller = Griffonne(self.cfg, on_status=self._on_status)
 
     # ----------------------------------------------------------- statut/icone
     def _on_status(self, state):
@@ -47,7 +47,7 @@ class TrayApp:
             return
         try:
             self.icon.icon = _make_image(_COLORS.get(state, (120, 120, 120)))
-            self.icon.title = f"Murmure — {_LABELS.get(state, state)}"
+            self.icon.title = f"Griffonne — {_LABELS.get(state, state)}"
         except Exception:
             pass
 
@@ -108,7 +108,7 @@ class TrayApp:
             pystray.MenuItem("Quitter", self._quit),
         )
         self.icon = pystray.Icon(
-            "murmure", _make_image(_COLORS[LOADING]), "Murmure — démarrage", menu)
+            "griffonne", _make_image(_COLORS[LOADING]), "Griffonne — démarrage", menu)
 
         self.controller.start()
         self.icon.run_detached()
@@ -120,7 +120,7 @@ def main():
         TrayApp().run()
     except Exception as exc:  # noqa: BLE001 — repli console si l'UI échoue
         print(f"[tray] UI indisponible ({exc!r}) — bascule en mode console.")
-        Murmure().run_console()
+        Griffonne().run_console()
 
 
 if __name__ == "__main__":

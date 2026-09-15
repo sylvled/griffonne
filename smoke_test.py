@@ -4,7 +4,7 @@ import time
 
 import numpy as np
 
-from murmure.engine import LocalEngine
+from griffonne.engine import LocalEngine
 
 print("Chargement du moteur (cuda / large-v3-turbo)...")
 t0 = time.time()

@@ -1,4 +1,4 @@
-"""Murmure - dictée vocale locale (équivalent SuperWhisper, gratuit)."""
+"""Griffonne - dictée vocale locale (équivalent SuperWhisper, gratuit)."""
 import sys as _sys
 
 __version__ = "1.0.0"
