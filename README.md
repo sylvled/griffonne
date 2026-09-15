@@ -226,3 +226,10 @@ Cinq phrases en voix de synthèse : c'est indicatif, pas définitif.
 
 Points d'entrée : `python -m griffonne` (app), `python -m murmure.app`
 (console), `python -m griffonne.server` (serveur).
+
+---
+
+## Licence
+
+[MIT](LICENSE). Les modèles ont leurs propres licences : Whisper (MIT),
+Parakeet (CC-BY-4.0), qwen2.5 (Apache-2.0).
