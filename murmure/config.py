@@ -11,7 +11,11 @@ DEFAULTS = {
 
     # --- moteur ---
     "backend": "local",          # "local" | "remote" | "auto" (distant si joignable)
-    "model": "large-v3-turbo",   # large-v3-turbo | large-v3 | small ...
+    # "whisper" (défaut, précision max avec amorce vocabulaire) ou
+    # "parakeet" (NVIDIA Parakeet 0.6B : ~0,4 s sur CPU, ~0,2 s en CUDA ;
+    # langue auto-détectée). Basculable à tout moment (Réglages ou menu tray).
+    "engine": "whisper",
+    "model": "large-v3-turbo",   # (Whisper) large-v3-turbo | large-v3 | small ...
     "device": "auto",            # "auto" | "cuda" | "cpu" (mode dégradé)
     "compute_type": "auto",      # "auto" | float16 (gpu) | int8 (cpu)
     "language": "fr",            # code langue, ou null pour auto-détection

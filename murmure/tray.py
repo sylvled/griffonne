@@ -60,6 +60,15 @@ class TrayApp:
         merged["enabled"] = enabled
         config.save(merged)
 
+    def _toggle_engine(self, icon, item):
+        """Bascule Whisper <-> Parakeet à chaud (sauvegarde + rechargement)."""
+        new = "parakeet" if self.cfg.get("engine", "whisper") == "whisper" else "whisper"
+        merged = config.load()
+        merged["engine"] = new
+        config.save(merged)
+        self.cfg = merged
+        self.controller.reload(merged)
+
     def _open_settings(self, icon=None, item=None):
         # doit s'exécuter dans le thread tkinter principal
         self.root.after(0, self._open_settings_main)
@@ -89,6 +98,11 @@ class TrayApp:
                 "Dictée activée",
                 self._toggle_enabled,
                 checked=lambda item: self.cfg.get("enabled", True),
+            ),
+            pystray.MenuItem(
+                "Moteur Parakeet (rapide)",
+                self._toggle_engine,
+                checked=lambda item: self.cfg.get("engine", "whisper") == "parakeet",
             ),
             pystray.MenuItem("Réglages…", self._open_settings),
             pystray.MenuItem("Quitter", self._quit),

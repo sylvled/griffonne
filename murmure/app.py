@@ -60,8 +60,9 @@ class Murmure:
 
     def _load_backend(self) -> None:
         self._set_state(LOADING)
-        print(f"[murmure] backend '{self.cfg['backend']}' "
-              f"(modèle {self.cfg['model']})...")
+        eng = self.cfg.get("engine", "whisper")
+        desc = "Parakeet 0.6B" if eng == "parakeet" else f"Whisper {self.cfg['model']}"
+        print(f"[murmure] backend '{self.cfg['backend']}' — moteur {desc}...")
         t0 = time.time()
         self.vocabulary = vocab_builder.build(self.cfg)
         print(f"[murmure] vocabulaire : {len(self.vocabulary)} termes")

@@ -15,13 +15,15 @@ class LocalBackend:
         from .devices import resolve_device
         device, compute = resolve_device(cfg["device"], cfg["compute_type"])
 
-        from .engine import LocalEngine
-        self.engine = LocalEngine(
+        from .engine import make_engine
+        self.engine = make_engine(
+            cfg.get("engine", "whisper"),
             model=cfg["model"], device=device, compute_type=compute,
             language=cfg["language"], clean_fillers=cfg["clean_fillers"],
             initial_prompt=cfg["initial_prompt"], replacements=cfg["replacements"],
             vocabulary=vocabulary,
         )
+        self.engine_name = cfg.get("engine", "whisper")
         self.device = self.engine.device
 
         self.corrector = None

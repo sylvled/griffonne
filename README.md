@@ -50,6 +50,26 @@ fichier, les valeurs par défaut de `murmure/config.py` s'appliquent.
 
 ---
 
+## Deux moteurs de transcription : Whisper ou Parakeet
+
+Murmure embarque **deux moteurs**, basculables à tout moment (Réglages → Moteur,
+ou case « Moteur Parakeet (rapide) » dans le menu de l'icône) :
+
+| | **Whisper** `large-v3-turbo` (défaut) | **Parakeet** TDT 0.6B v3 |
+|---|---|---|
+| Précision brute (FR) | ≈ égale | ≈ égale |
+| Jargon / noms propres | ✅ **meilleur** (amorce par ton vocabulaire, langue forcée) | ⚠️ pas d'amorce (« Cloud Code » au lieu de « Claude Code ») |
+| Vitesse GPU | ~0,5 s | **~0,2 s** |
+| Vitesse CPU | ~2,3 s (`small`) | **~0,4 s** |
+| Langue | forcée (`fr`) | auto-détectée (25 langues européennes) |
+
+En clair : **Whisper pour la précision sur ton vocabulaire** (PC avec GPU),
+**Parakeet quand la vitesse prime ou qu'il n'y a pas de GPU** (poste pro).
+Tout le post-traitement (hésitations, vocabulaire, LLM, collage) est commun.
+
+> Parakeet en CUDA : nécessite `onnxruntime-gpu==1.22.0` (compilé pour CUDA 12,
+> voir `requirements.txt`). En CPU, rien de plus à installer.
+
 ## La correction automatique, en détail
 
 Chaîne de traitement :
@@ -102,17 +122,18 @@ Réglages recommandés (onglet Général / Correction) :
 
 | Réglage | Valeur | Pourquoi |
 |---|---|---|
-| Modèle | **`small`** | meilleur compromis CPU (voir mesures) |
+| **Moteur** | **`parakeet`** | ~0,4 s sur CPU, précision égale à Whisper |
 | Calcul (device) | `cpu` | ou `auto`, qui détecte l'absence de GPU |
 | Correction LLM | **désactivée** | un LLM sur CPU est trop lent |
 
-Mesures sur un Intel i7-7820X, pour 7,2 s d'audio :
+Mesures sur un Intel i7-7820X (CPU seul), pour ~7 s d'audio :
 
-| Modèle | Temps | Ratio temps réel |
+| Moteur | Temps | Verdict |
 |---|---|---|
-| `base` | 0,72 s | 0,10× (très rapide, qualité moindre) |
-| `small` | 2,14 s | **0,30× — recommandé** |
-| `large-v3-turbo` | 8,11 s | 1,13× (inutilisable sur CPU) |
+| **Parakeet 0.6B** | **0,38 s** | ✅ **recommandé** |
+| Whisper `base` | 0,72 s | rapide, qualité moindre |
+| Whisper `small` | 2,14 s | correct mais 5× plus lent que Parakeet |
+| Whisper `large-v3-turbo` | 8,11 s | inutilisable sur CPU |
 
 Même sans LLM, tu gardes le nettoyage des hésitations, les remplacements
 déterministes et **l'orthographe exacte de ton vocabulaire** (`vera` → `VERA`).
@@ -125,7 +146,7 @@ install_cpu.bat
 
 Ce script crée l'environnement et installe **uniquement** ce qui est utile en
 CPU : il **évite les 1,9 Go de bibliothèques CUDA** inutiles ici. Il applique
-aussi le préréglage `config.cpu.json` (modèle `small`, device `cpu`, LLM
+aussi le préréglage `config.cpu.json` (moteur `parakeet`, device `cpu`, LLM
 désactivé). Ensuite : `run.bat`.
 
 **Si le proxy d'entreprise bloque le téléchargement du modèle** (HuggingFace),

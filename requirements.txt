@@ -5,8 +5,12 @@ pyperclip
 numpy
 pystray
 pillow
+onnx-asr
 # GPU (CUDA 12) — retirer ces 2 lignes pour une install CPU pure
 nvidia-cublas-cu12
 nvidia-cudnn-cu12
 # Correction automatique : nécessite Ollama installé séparément
 #   https://ollama.com  +  `ollama pull qwen2.5:3b`
+# Parakeet en CUDA (optionnel) : ONNX Runtime GPU compile pour CUDA 12.
+# ATTENTION : 1.23+ est compile pour CUDA 13 (pas de wheels cu13 Windows/py3.13).
+#   pip uninstall -y onnxruntime && pip install onnxruntime-gpu==1.22.0

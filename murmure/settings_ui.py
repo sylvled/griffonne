@@ -6,6 +6,7 @@ from tkinter import ttk
 from . import config, vocab_builder
 from .devices import list_microphones
 
+ENGINES = ["whisper", "parakeet"]
 MODELS = ["large-v3-turbo", "large-v3", "medium", "small", "base"]
 DEVICES = ["auto", "cuda", "cpu"]
 LLM_MODES = ["conservative", "light"]
@@ -72,7 +73,11 @@ class SettingsWindow:
         t = ttk.Frame(nb)
         nb.add(t, text="Général")
         self._combo(t, "Mode (backend)", "backend", BACKENDS)
-        self._combo(t, "Modèle Whisper", "model", MODELS)
+        self._combo(t, "Moteur", "engine", ENGINES)
+        ttk.Label(t, text="whisper = précision max (amorce vocabulaire, langue forcée)\n"
+                  "parakeet = très rapide même sur CPU (langue auto-détectée)",
+                  foreground="gray").pack(anchor="w", padx=4)
+        self._combo(t, "Modèle (Whisper)", "model", MODELS)
         self._combo(t, "Calcul (device)", "device", DEVICES)
         self._entry(t, "Langue (fr, en, ...)", "language")
 
