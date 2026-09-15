@@ -23,9 +23,9 @@ _TEXT_EXT = {".md", ".markdown", ".txt", ".rst", ".org"}
 _SKIP_DIRS = {".git", ".venv", "venv", "node_modules", "__pycache__",
               ".cache", "dist", "build", ".idea", ".vscode", "site-packages"}
 
-# acronymes en majuscules (VERA, ANSSI, GPU...)
+# acronymes en majuscules (NASA, GPU, HTML...)
 _ACRONYM = re.compile(r"\b[A-Z]{2,6}\b")
-# identifiants en casse mixte (ESXi, ESPEasy, iDRAC, Tailscale...)
+# identifiants en casse mixte (GitHub, PostgreSQL, iPhone, macOS...)
 _MIXED = re.compile(r"\b(?:[A-Z]{2,}[a-z]\w*|[a-z]+[A-Z]\w*|[A-Z][a-z]+[A-Z]\w*)\b")
 
 # bruit fréquent à exclure
@@ -54,12 +54,9 @@ def _candidates(text: str) -> list[str]:
 def default_folders() -> list[str]:
     """Dossiers scannés par défaut si l'utilisateur n'en a pas choisi."""
     folders = []
-    apps = ROOT.parent                      # ex: D:\Mes_applications
-    if apps.is_dir():
-        folders.append(str(apps))
-    claude = Path.home() / ".claude"        # mémoire/notes Claude (jargon perso)
-    if claude.is_dir():
-        folders.append(str(claude))
+    docs = Path.home() / "Documents"        # notes, comptes rendus, docs perso
+    if docs.is_dir():
+        folders.append(str(docs))
     return folders
 
 

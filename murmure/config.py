@@ -26,9 +26,8 @@ DEFAULTS = {
     # Vocabulaire « graine » (toujours présent). Le reste se construit tout
     # seul (cf. vocab_auto / vocab_learn). Orthographe EXACTE des termes.
     "vocabulary": [
-        "Claude Code", "Anthropic", "Whisper", "Ollama",
-        "ESXi", "VERA", "ESPEasy", "Proxmox", "Tailscale",
-        "iDRAC", "ANSSI", "OCCE", "reconnaissance vocale",
+        "reconnaissance vocale", "Whisper", "Ollama", "GitHub", "Python",
+        "Windows", "Linux", "PDF", "API", "VPN",
     ],
     # Construction automatique du vocabulaire.
     "vocab_auto": True,          # utilise le vocabulaire construit (sinon graine seule)

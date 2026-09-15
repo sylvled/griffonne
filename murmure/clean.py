@@ -20,7 +20,7 @@ _STUTTER_RE = re.compile(
 
 def enforce_vocab(text: str, vocabulary: list[str] | None) -> str:
     """Force l'orthographe/casse exacte des termes du vocabulaire
-    (« vera » -> « VERA », « claude code » -> « Claude Code »).
+    (« github » -> « GitHub », « postgresql » -> « PostgreSQL »).
     Déterministe et instantané : fonctionne SANS LLM (utile en mode CPU)."""
     if not text or not vocabulary:
         return text

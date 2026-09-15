@@ -1,203 +1,228 @@
 # Murmure 🎙️
 
-Dictée vocale locale, rapide et **gratuite** — un équivalent de SuperWhisper.
-Appuie sur un raccourci, parle, et le texte est **corrigé puis collé** dans
-l'application active (Teams, Outlook, VS Code, Claude Code…).
+Dictée vocale **locale, rapide et gratuite** pour Windows. Un raccourci, tu
+parles, et le texte — transcrit, corrigé, mis en forme — est collé dans
+l'application active (traitement de texte, messagerie, terminal, IDE…).
 
-- 🧠 **Transcription** : faster-whisper (`large-v3-turbo`) sur GPU (CUDA), repli CPU.
-- ✨ **Correction automatique** par LLM local (Ollama) : noms propres, ponctuation,
-  accents, hésitations — **sans aucun dictionnaire à remplir à la main**.
-- 🌱 **Vocabulaire qui se construit tout seul** : il apprend tes termes au fil des dictées.
-- 🖥️ **UI de réglages** + icône dans la barre des tâches.
-- 🌐 **Mode distant** : dicte depuis un PC sans GPU, la transcription se fait sur ton PC GPU.
-- 💸 **100 % local et gratuit** : aucune API, aucune donnée n'quitte tes machines.
+- 🧠 **Deux moteurs au choix** : Whisper `large-v3-turbo` (précision) ou NVIDIA
+  Parakeet 0.6B (vitesse, fonctionne sans GPU). Bascule à tout moment.
+- ✨ **Correction automatique** par LLM local (Ollama) : noms propres,
+  ponctuation, accents — sans reformuler.
+- 🌱 **Vocabulaire qui s'apprend tout seul** : les termes techniques et noms
+  propres que tu dictes sont mémorisés et réutilisés.
+- 🧹 **Nettoyage des hésitations** (« euh », « heu », bégaiements).
+- 🖥️ Icône dans la barre des tâches + fenêtre de réglages.
+- 🌐 **Mode distant** optionnel : un PC sans GPU délègue la transcription à un
+  PC équipé, avec repli local automatique.
+- 🔒 **100 % local** : aucune API cloud, aucune donnée ne quitte tes machines.
 
 ---
 
-## Démarrage rapide
+## Installation
+
+Prérequis : Windows 10/11, [Python 3.11+](https://www.python.org/downloads/).
+Pour la correction automatique : [Ollama](https://ollama.com) puis
+`ollama pull qwen2.5:3b` (facultatif — sans Ollama, la dictée fonctionne sans
+la passe LLM).
+
+| Ta machine | Installation |
+|---|---|
+| **Avec GPU NVIDIA** | `python -m venv .venv` puis `.venv\Scripts\pip install -r requirements.txt` |
+| **Sans GPU** | `install_cpu.bat` (moteur Parakeet, sans les 1,9 Go de bibliothèques CUDA) |
+
+## Lancer
 
 | Je veux… | Je lance |
 |---|---|
-| **Dicter avec logs visibles** (le plus simple) | `run.bat` |
-| **L'app complète** (icône barre des tâches + réglages) | `run_tray.bat` |
-| **Démarrage auto** au login (sans fenêtre) | `install_autostart.bat` |
-| **Serveur GPU** (pour le mode distant) | `serve.bat` |
-| **Installer sur un PC sans GPU** | `install_cpu.bat` |
+| Dicter avec les logs visibles (le plus simple) | `run.bat` |
+| L'app complète (icône barre des tâches + réglages) | `run_tray.bat` |
+| Le démarrage automatique à l'ouverture de session | `install_autostart.bat` |
+| Le serveur de transcription (mode distant) | `serve.bat` |
 
-Au 1er lancement, le modèle se charge (quelques secondes) puis l'app affiche **PRÊT**.
+Au premier lancement le modèle se télécharge (~1,6 Go pour Whisper turbo,
+~600 Mo pour Parakeet) puis l'app affiche **PRÊT**.
 
 ### Utilisation
-1. Clique dans un champ texte (Bloc-notes, Teams, VS Code…).
+
+1. Clique dans un champ texte.
 2. **Ctrl+Alt+M** → parle (bip aigu).
 3. **Ctrl+Alt+M** → fin (bip grave). Le texte corrigé se colle tout seul.
-4. Pour quitter : menu de l'icône → **Quitter** (le raccourci global « quitter » est désactivé par défaut, il se déclenchait par erreur).
+4. Pour quitter : menu de l'icône → **Quitter**.
 
-L'icône de la barre des tâches change de couleur : 🟡 chargement · 🟢 prêt ·
-🔴 enregistrement · 🔵 transcription · ⚪ désactivée.
+Couleur de l'icône : 🟡 chargement · 🟢 prêt · 🔴 enregistrement ·
+🔵 transcription · ⚪ désactivée.
 
 ---
 
 ## Réglages (icône → « Réglages… »)
 
-Tout est modifiable **sans éditer de fichier** :
-- **Général** : modèle, GPU/CPU, langue, **micro**, raccourcis, auto-collage, volume des bips.
-- **Correction** : nettoyage des hésitations, correction LLM (modèle, mode conservateur/light).
-- **Vocabulaire** : apprentissage auto, récolte de fichiers (optionnelle), aperçu du vocabulaire.
-- **Distant** : URL/jeton du serveur (client) ou host/port (serveur).
+Tout se règle sans éditer de fichier :
 
-La config est stockée dans `config.json` (généré automatiquement). Sans ce
-fichier, les valeurs par défaut de `murmure/config.py` s'appliquent.
+- **Général** : moteur (Whisper / Parakeet), modèle, GPU/CPU, langue, micro,
+  raccourci, auto-collage, volume des bips.
+- **Correction** : nettoyage des hésitations, correction LLM (modèle, mode
+  *conservateur* ou *light*).
+- **Vocabulaire** : apprentissage automatique, récolte optionnelle dans des
+  fichiers de notes, aperçu.
+- **Distant** : URL et jeton du serveur (client), interface et port (serveur).
+
+La configuration est stockée dans `config.json` (généré, ignoré par Git).
+Les valeurs par défaut sont dans `murmure/config.py`.
 
 ---
 
-## Deux moteurs de transcription : Whisper ou Parakeet
-
-Murmure embarque **deux moteurs**, basculables à tout moment (Réglages → Moteur,
-ou case « Moteur Parakeet (rapide) » dans le menu de l'icône) :
+## Deux moteurs : Whisper ou Parakeet
 
 | | **Whisper** `large-v3-turbo` (défaut) | **Parakeet** TDT 0.6B v3 |
 |---|---|---|
-| Précision brute (FR) | ≈ égale | ≈ égale |
-| Jargon / noms propres | ✅ **meilleur** (amorce par ton vocabulaire, langue forcée) | ⚠️ pas d'amorce (« Cloud Code » au lieu de « Claude Code ») |
-| Vitesse GPU | ~0,5 s | **~0,2 s** |
-| Vitesse CPU | ~2,3 s (`small`) | **~0,4 s** |
-| Langue | forcée (`fr`) | auto-détectée (25 langues européennes) |
+| Précision brute (français) | ≈ égale | ≈ égale |
+| Termes techniques / noms propres | ✅ meilleur : amorcé par ton vocabulaire, langue forcée | ⚠️ pas d'amorce, langue auto-détectée |
+| Temps de traitement, GPU | ~0,5 s | **~0,2 s** |
+| Temps de traitement, CPU | ~2,3 s (modèle `small`) | **~0,4 s** |
+| Mots anglais dans du français | correct | ✅ légèrement meilleur |
 
-En clair : **Whisper pour la précision sur ton vocabulaire** (PC avec GPU),
-**Parakeet quand la vitesse prime ou qu'il n'y a pas de GPU** (poste pro).
-Tout le post-traitement (hésitations, vocabulaire, LLM, collage) est commun.
+Bascule : Réglages → *Moteur*, ou case « Moteur Parakeet (rapide) » dans le
+menu de l'icône. Le post-traitement (hésitations, vocabulaire, LLM, collage)
+est identique pour les deux.
 
-> Parakeet en CUDA : nécessite `onnxruntime-gpu==1.22.0` (compilé pour CUDA 12,
-> voir `requirements.txt`). En CPU, rien de plus à installer.
-
-## La correction automatique, en détail
-
-Chaîne de traitement :
-
-```
-Whisper (audio→texte, amorcé par ton vocabulaire)
-   → nettoyage (hésitations, bégaiements, corrections déterministes)
-   → LLM local Ollama (corrige noms propres / ponctuation, SANS reformuler)
-   → orthographe exacte de ton vocabulaire forcée
-   → collé dans l'app active
-```
-
-**Le vocabulaire se construit tout seul** : à chaque dictée, les termes
-techniques / noms propres que tu emploies sont mémorisés (fichier
-`vocabulary.json`, géré par le programme). Plus tu l'utilises, plus il connaît
-ton jargon. Tu peux aussi activer la récolte dans des fichiers de notes
-(onglet Vocabulaire).
-
-> Prérequis correction : [Ollama](https://ollama.com) installé + le modèle :
-> `ollama pull qwen2.5:3b`. Si Ollama est absent, la dictée fonctionne quand
-> même (sans la passe LLM).
+> Parakeet en CUDA : installer `onnxruntime-gpu==1.22.0` (compilé pour
+> CUDA 12 ; les versions ≥ 1.23 ciblent CUDA 13). En CPU, rien à ajouter.
 
 ---
 
-## Mode distant (PC pro sans GPU → PC perso RTX 3080)
+## La correction automatique
 
-1. **Sur le PC GPU** (perso) : définis un jeton et lance le serveur.
-   - Réglages → Distant → *Jeton* = un mot de passe ; *host* = `0.0.0.0`.
-   - `serve.bat`
-2. **Connecte tes deux PC** avec [Tailscale](https://tailscale.com) (gratuit,
-   chiffré, sans ouvrir de port). Note l'IP Tailscale du PC GPU (`100.x.y.z`).
-3. **Sur le PC pro** (client) :
-   - Réglages → Général → *Mode* = `remote`.
-   - Réglages → Distant → *URL du serveur* = `http://100.x.y.z:8765`, même *jeton*.
-   - `run_tray.bat`
+```
+Moteur (audio → texte, Whisper amorcé par le vocabulaire)
+   → nettoyage : hésitations, bégaiements, remplacements déterministes
+   → LLM local (Ollama) : noms propres, ponctuation, accents — sans reformuler
+   → orthographe exacte du vocabulaire forcée (ex. « github » → « GitHub »)
+   → collage dans l'application active
+```
 
-Tu dictes sur le PC pro, l'audio part chiffré vers le PC GPU, le texte revient
-et se colle. ⚠️ **Toujours définir un jeton** si le serveur est accessible
-au-delà de localhost.
+**Le vocabulaire se construit tout seul.** À chaque dictée, les acronymes et
+termes en casse mixte sont mémorisés dans `vocabulary.json` (géré par le
+programme). Ils servent ensuite à amorcer Whisper, à guider le LLM et à forcer
+l'orthographe exacte. Une graine générique est fournie ; tout le reste vient
+de ton usage.
+
+Le prompt du LLM est volontairement strict (*« dans le doute, ne change
+rien »*) : les tests ont montré qu'un petit modèle non contraint invente des
+substitutions de noms propres.
 
 ---
 
-## PC sans GPU (ou derrière un VPN d'entreprise)
+## Sans GPU
 
-Si la machine n'a pas de carte graphique — ou si un VPN d'entreprise empêche
-d'atteindre le PC GPU — Murmure tourne **entièrement en local sur le CPU**.
-Aucun réseau, aucune donnée qui sort.
+Choisis le moteur **Parakeet** (préréglage `config.cpu.json`, appliqué par
+`install_cpu.bat`) et désactive la correction LLM (trop lente sur CPU).
+Mesures sur un Intel i7-7820X, CPU seul, ~7 s d'audio :
 
-Réglages recommandés (onglet Général / Correction) :
-
-| Réglage | Valeur | Pourquoi |
-|---|---|---|
-| **Moteur** | **`parakeet`** | ~0,4 s sur CPU, précision égale à Whisper |
-| Calcul (device) | `cpu` | ou `auto`, qui détecte l'absence de GPU |
-| Correction LLM | **désactivée** | un LLM sur CPU est trop lent |
-
-Mesures sur un Intel i7-7820X (CPU seul), pour ~7 s d'audio :
-
-| Moteur | Temps | Verdict |
-|---|---|---|
-| **Parakeet 0.6B** | **0,38 s** | ✅ **recommandé** |
-| Whisper `base` | 0,72 s | rapide, qualité moindre |
-| Whisper `small` | 2,14 s | correct mais 5× plus lent que Parakeet |
-| Whisper `large-v3-turbo` | 8,11 s | inutilisable sur CPU |
-
-Même sans LLM, tu gardes le nettoyage des hésitations, les remplacements
-déterministes et **l'orthographe exacte de ton vocabulaire** (`vera` → `VERA`).
-
-### Installer sur un PC sans GPU (ex. poste professionnel)
-
-```
-install_cpu.bat
-```
-
-Ce script crée l'environnement et installe **uniquement** ce qui est utile en
-CPU : il **évite les 1,9 Go de bibliothèques CUDA** inutiles ici. Il applique
-aussi le préréglage `config.cpu.json` (moteur `parakeet`, device `cpu`, LLM
-désactivé). Ensuite : `run.bat`.
-
-**Si le proxy d'entreprise bloque le téléchargement du modèle** (HuggingFace),
-copie simplement le cache depuis une machine où il est déjà téléchargé :
-
-| Depuis | Vers (même chemin) |
+| Moteur | Temps |
 |---|---|
-| `%USERPROFILE%\.cache\huggingface\hub\models--Systran--faster-whisper-small` | idem sur le PC pro |
+| **Parakeet 0.6B** | **0,38 s** |
+| Whisper `base` | 0,72 s |
+| Whisper `small` | 2,14 s |
+| Whisper `large-v3-turbo` | 8,11 s |
 
-Le dossier fait ~464 Mo (`small`) ou ~142 Mo (`base`). Une clé USB suffit, et
-Murmure fonctionne alors **totalement hors ligne**.
+Même sans LLM, le nettoyage des hésitations et l'orthographe du vocabulaire
+restent actifs. Si le téléchargement des modèles est bloqué (proxy), copie le
+cache `%USERPROFILE%\.cache\huggingface\hub` depuis une autre machine : tout
+fonctionne alors hors ligne.
 
-> 🔒 En mode CPU local, **aucune donnée ne quitte le poste** : ni audio, ni
-> texte, ni réseau. C'est le mode à privilégier si tu dictes du contenu
-> professionnel.
+---
 
-### Mode `auto` (nomade)
+## Mode distant
 
-Mets *Mode* sur **`auto`** : au démarrage, Murmure teste si le serveur GPU
-répond. Joignable (à la maison) → transcription distante rapide. Injoignable
-(VPN d'entreprise) → **repli automatique en local**. Aucun réglage à changer
-selon l'endroit où tu es.
+Un PC sans GPU peut déléguer la transcription à un PC équipé :
 
-> ⚠️ Avant d'envoyer du contenu professionnel vers une machine personnelle,
-> vérifie la politique de sécurité de ton employeur.
+1. Sur le PC GPU : Réglages → Distant → définir un **jeton**, puis `serve.bat`.
+2. Relier les deux machines (par ex. [Tailscale](https://tailscale.com),
+   chiffré, sans ouvrir de port).
+3. Sur le client : *Mode* = `remote` (ou `auto` : distant si joignable, sinon
+   repli local), URL du serveur et même jeton.
+
+L'audio est envoyé en int16 (≈ 470 Ko pour 15 s). ⚠️ Toujours définir un jeton
+dès que le serveur est accessible au-delà de `localhost`. Réfléchis à la
+nature des données dictées avant de les faire transiter par une autre machine.
+
+---
+
+## Comparaison avec murmure.app
+
+[murmure.app](https://murmure.app) (Kieirra / Al1x-ai, AGPL v3) est un projet
+indépendant, homonyme par coïncidence, qui poursuit le même objectif. Les deux
+ont été comparés sur **le même corpus** : 5 phrases françaises (voix de
+synthèse, 6 à 9 s), transcrites par l'API locale de murmure.app et par ce
+projet, avec le taux d'erreur mot (WER) contre le texte de référence.
+
+| | murmure.app 1.11 | Ce projet |
+|---|---|---|
+| Moteur | Parakeet TDT 0.6B v3 (CPU) | Whisper `large-v3-turbo` **ou** Parakeet |
+| Plateformes | Windows, macOS, Linux (installeurs) | Windows (Python) |
+| GPU | non utilisé pour la transcription | CUDA (Whisper et Parakeet) ou CPU |
+| Correction LLM | *LLM Connect* : Ollama ou API OpenAI-compatible, prompts libres | Ollama, prompt strict intégré |
+| Vocabulaire | manuel ou import `.txt` (≤ 2 mots/entrée, ≤ 100 entrées) | **appris automatiquement**, illimité |
+| Hésitations | règles de formatage (regex) | intégré |
+| Langue | auto-détectée (25 langues), non forçable | forçable |
+| Autres | transformer un texte sélectionné, commandes vocales, micro via téléphone, API, CLI | mode distant, repli automatique |
+
+Résultats (dictionnaire de murmure.app vide, LLM Connect non configuré) :
+
+| Configuration | Temps moyen | WER moyen |
+|---|---|---|
+| murmure.app (Parakeet, CPU) | 0,51 s | 11,0 % |
+| Ce projet — Whisper GPU, sans LLM | 0,59 s | 10,2 % |
+| Ce projet — Whisper GPU + LLM + vocabulaire | 0,48 s | **7,0 %** |
+| Ce projet — Parakeet, CPU | 0,38 s | 11,0 % |
+| Ce projet — Parakeet, CUDA | 0,17 s | 11,0 % |
+
+Lecture honnête de ces chiffres :
+
+- **À moteur nu, égalité** : Parakeet et Whisper turbo font jeu égal sur du
+  français, et Parakeet le fait avec un modèle dix fois plus petit.
+- **L'écart vient du post-traitement** (LLM + vocabulaire), pas du moteur.
+  murmure.app dispose d'un dictionnaire et de LLM Connect ; configurés, ils
+  réduiraient l'écart.
+- **Sans GPU, Parakeet est la référence** : 4 à 5 fois plus rapide que Whisper
+  `small` à qualité égale. C'est pour cela qu'il est intégré ici.
+- murmure.app est plus **mûr** (installeurs, multi-plateforme, communauté) et
+  offre des fonctions absentes ici (transformation de texte, commandes vocales).
+- Ce projet apporte le **vocabulaire auto-appris**, la **langue forçable**, le
+  choix du moteur et le mode distant.
+
+Cinq phrases en voix de synthèse : c'est indicatif, pas définitif.
+
+---
 
 ## Dépannage
 
-- **Rien ne se passe au raccourci** : lance le terminal **en administrateur**
-  (capture clavier globale).
-- **Transcription vide** : mauvais micro sélectionné (Réglages → Général → Micro).
-- **Pas de correction** : Ollama n'est pas lancé, ou modèle absent
+- **Rien au raccourci** : lancer en administrateur (capture clavier globale)
+  ou vérifier qu'aucune autre application n'utilise le même raccourci.
+- **Transcription vide** : mauvais micro (Réglages → Général → Micro).
+- **Pas de correction** : Ollama absent ou modèle manquant
   (`ollama pull qwen2.5:3b`).
-- **Lent** : c'est la passe LLM (~2-3 s). Tu peux la désactiver, choisir un
-  modèle plus petit, ou passer le device en CPU si pas de GPU.
+- **Latence anormale (~2 s de plus par dictée)** : l'URL d'Ollama doit être
+  `http://127.0.0.1:11434`, pas `localhost` — sous Windows, `localhost` tente
+  d'abord IPv6 alors qu'Ollama n'écoute qu'en IPv4.
+- **L'app s'arrête sans raison** : consulter `murmure_autostart.log`, chaque
+  arrêt y est tracé avec sa cause.
 
 ---
 
-## Architecture (pour plus tard)
+## Architecture
 
 | Fichier | Rôle |
 |---|---|
-| `murmure/app.py` | Contrôleur : hotkey, capture, orchestration |
-| `murmure/engine.py` | Transcription faster-whisper |
+| `murmure/app.py` | Contrôleur : raccourci, capture, orchestration, rechargement |
+| `murmure/engine.py` | Moteurs Whisper (faster-whisper) et Parakeet (onnx-asr) |
 | `murmure/llm.py` | Correction par LLM local (Ollama) |
-| `murmure/clean.py` | Nettoyage déterministe (hésitations, remplacements) |
-| `murmure/vocab_builder.py` | Vocabulaire auto (apprentissage + récolte) |
-| `murmure/backend.py` | Abstraction local / distant |
+| `murmure/clean.py` | Nettoyage déterministe, orthographe du vocabulaire |
+| `murmure/vocab_builder.py` | Vocabulaire auto-appris (+ récolte optionnelle) |
+| `murmure/backend.py` | Local / distant / auto |
 | `murmure/server.py` | Serveur de transcription distant |
-| `murmure/tray.py` / `settings_ui.py` | Interface (tray + réglages) |
-| `murmure/devices.py` / `audio.py` | GPU/micro, capture |
+| `murmure/tray.py`, `settings_ui.py` | Icône et réglages |
+| `murmure/devices.py`, `audio.py`, `win.py` | GPU, micro, capture, fenêtre cible |
 
-Modes de lancement : `python -m murmure` (app tray), `python -m murmure.app`
+Points d'entrée : `python -m murmure` (app), `python -m murmure.app`
 (console), `python -m murmure.server` (serveur).

@@ -17,7 +17,7 @@ _RULES_CONSERVATIVE = (
     "heu).\n"
     "- Noms propres / termes techniques : remplace un mot UNIQUEMENT s'il est "
     "une déformation phonétique ÉVIDENTE d'un terme du vocabulaire ci-dessous "
-    "(ex. « esquissi » → « ESXi », « cloud code » → « Claude Code »). Ne "
+    "(ex. « git hube » → « GitHub », « postgré » → « PostgreSQL »). Ne "
     "remplace jamais un nom propre déjà correct par un autre. Dans le doute, "
     "ne change rien.\n"
     "- Ne traduis pas. Réponds UNIQUEMENT par le texte corrigé, sans guillemets "
