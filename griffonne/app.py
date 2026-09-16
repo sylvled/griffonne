@@ -38,6 +38,7 @@ class Griffonne:
         self.state = LOADING
         self._listener: pk.GlobalHotKeys | None = None
         self._target_hwnd = None  # fenêtre cible mémorisée à l'arrêt de l'écoute
+        self._target_ctrl = None  # contrôle (champ) qui avait le focus dedans
         self._quit = threading.Event()
 
     # ------------------------------------------------------------------ utils
@@ -47,6 +48,12 @@ class Griffonne:
             self.on_status(s)
         except Exception:  # noqa: BLE001
             pass
+
+    def _hotkey_vks(self) -> list[int]:
+        """Codes de touche virtuelle des touches « lettre/chiffre » du raccourci
+        (les modificateurs sont déjà surveillés par win.wait_keys_released)."""
+        return [ord(p.strip().upper()) for p in self.cfg["hotkey"].split("+")
+                if len(p.strip()) == 1]
 
     def _cue(self, kind: str) -> None:
         if self.cfg["beep"]:
@@ -103,9 +110,10 @@ class Griffonne:
             self._cue("start")
             print("[griffonne] 🎙️  enregistrement...")
         elif self.state == RECORDING:
-            # mémorise MAINTENANT la fenêtre visée (le focus est correct à
-            # l'instant où l'utilisateur arrête l'écoute)
+            # mémorise MAINTENANT la fenêtre visée ET le contrôle qui a le
+            # focus dedans (corrects à l'instant où l'utilisateur arrête)
             self._target_hwnd = win.get_foreground_window()
+            self._target_ctrl = win.get_focused_control(self._target_hwnd)
             self._set_state(BUSY)
             self._cue("stop")
             threading.Thread(target=self._finish, daemon=True).start()
@@ -125,8 +133,15 @@ class Griffonne:
         print(f"[griffonne] ✅ ({time.time() - t0:.1f}s) : {text}")
         if text:
             if self.cfg["auto_paste"] and self._target_hwnd:
-                win.focus_window(self._target_hwnd)  # recible la bonne fenêtre
+                # 1) les touches du raccourci doivent être relâchées, sinon
+                #    le Ctrl+V part en Ctrl+Alt+V (chaîne rapide = course)
+                released = win.wait_keys_released(self._hotkey_vks())
+                # 2) fenêtre + contrôle d'origine remis au premier plan
+                focused = win.focus_window(self._target_hwnd, self._target_ctrl)
                 time.sleep(0.12)
+                print(f"[griffonne] 📋 collage dans « {win.window_title(self._target_hwnd)} » "
+                      f"(focus {'ok' if focused else 'ÉCHEC'}, touches "
+                      f"{'relâchées' if released else 'ENCORE ENFONCÉES'})")
             output_text(text, self.cfg["auto_paste"])
             if self.cfg["backend"] == "local":  # apprentissage local
                 vocab_builder.learn(text, self.cfg)
