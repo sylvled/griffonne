@@ -65,9 +65,13 @@ class TrayApp:
         new = "parakeet" if self.cfg.get("engine", "whisper") == "whisper" else "whisper"
         merged = config.load()
         merged["engine"] = new
+        try:
+            self.controller.reload(merged)
+        except ValueError as exc:      # raccourci invalide en config : on ne casse rien
+            print(f"[tray] bascule refusée : {exc}")
+            return
         config.save(merged)
         self.cfg = merged
-        self.controller.reload(merged)
 
     def _open_settings(self, icon=None, item=None):
         # doit s'exécuter dans le thread tkinter principal

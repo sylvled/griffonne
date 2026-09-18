@@ -1,9 +1,9 @@
 """Fenêtre de réglages (tkinter). Édite la config sans toucher au JSON.
 Au clic « Enregistrer & appliquer », sauvegarde puis appelle on_save(cfg)."""
 import tkinter as tk
-from tkinter import ttk
+from tkinter import messagebox, ttk
 
-from . import config, vocab_builder
+from . import config, hotkeys, vocab_builder
 from .devices import list_microphones
 
 ENGINES = ["whisper", "parakeet"]
@@ -68,6 +68,89 @@ class SettingsWindow:
             side="left", fill="x", expand=True)
         self.vars[key] = v
 
+    def _hotkey_row(self, parent, label, key):
+        f = self._row(parent, label)
+        v = tk.StringVar(value=str(self.cfg.get(key, "") or ""))
+        ttk.Entry(f, textvariable=v, width=22).pack(side="left")
+        ttk.Button(f, text="Capturer…",
+                   command=lambda: self._capture_hotkey(v)).pack(side="left", padx=4)
+        status = ttk.Label(f, text="", width=26)
+        status.pack(side="left")
+        self.vars[key] = v
+
+        def refresh(*_):
+            combo = v.get().strip()
+            if not combo:
+                status.config(text="(désactivé)" if key == "quit_hotkey" else "requis",
+                              foreground="gray" if key == "quit_hotkey" else "red")
+                return
+            ok, msg = hotkeys.validate(combo)
+            status.config(text=("✓ " + hotkeys.pretty(msg)) if ok else ("✗ " + msg),
+                          foreground="green" if ok else "red")
+        v.trace_add("write", refresh)
+        refresh()
+
+    def _capture_hotkey(self, var):
+        """Petite fenêtre modale : appuie sur la combinaison, elle est lue."""
+        dlg = tk.Toplevel(self.win)
+        dlg.title("Capture du raccourci")
+        dlg.geometry("420x150")
+        dlg.transient(self.win)
+        dlg.grab_set()
+        ttk.Label(dlg, text="Appuie sur la combinaison voulue\n"
+                  "(Échap seul = annuler)", justify="center").pack(pady=(12, 4))
+        preview = ttk.Label(dlg, text="…", font=("", 14, "bold"))
+        preview.pack(pady=4)
+        held: set[str] = set()
+        _MOD = {"Control_L": "ctrl", "Control_R": "ctrl", "Alt_L": "alt", "Alt_R": "alt",
+                "Shift_L": "shift", "Shift_R": "shift", "Win_L": "cmd", "Win_R": "cmd",
+                "Super_L": "cmd", "Super_R": "cmd", "Meta_L": "cmd", "Meta_R": "cmd"}
+        _KEY = {"space": "space", "Return": "enter", "KP_Enter": "enter", "Escape": "esc",
+                "Tab": "tab", "BackSpace": "backspace", "Delete": "delete",
+                "Insert": "insert", "Home": "home", "End": "end", "Prior": "page_up",
+                "Next": "page_down", "Up": "up", "Down": "down", "Left": "left",
+                "Right": "right", "Pause": "pause", "Scroll_Lock": "scroll_lock",
+                "Print": "print_screen", "Snapshot": "print_screen", "App": "menu",
+                "Menu": "menu", "Caps_Lock": "caps_lock", "Num_Lock": "num_lock"}
+
+        def show():
+            order = [m for m in ("ctrl", "alt", "shift", "cmd") if m in held]
+            preview.config(text=hotkeys.pretty("+".join(order)) if order else "…")
+
+        def on_press(e):
+            ks = e.keysym
+            if ks in _MOD:
+                held.add(_MOD[ks]); show(); return "break"
+            if ks == "Escape" and not held:
+                dlg.destroy(); return "break"
+            if ks in _KEY:
+                key = _KEY[ks]
+            elif ks.startswith("F") and ks[1:].isdigit():
+                key = ks.lower()
+            elif len(ks) == 1 or (len(e.char) == 1 and e.char.isprintable()):
+                key = (ks if len(ks) == 1 else e.char).lower()
+            else:
+                return "break"  # touche non gérée : on ignore
+            order = [m for m in ("ctrl", "alt", "shift", "cmd") if m in held]
+            combo = "+".join(order + [key])
+            ok, msg = hotkeys.validate(combo)
+            if ok:
+                var.set(msg); dlg.destroy()
+            else:
+                preview.config(text="✗ " + msg)
+            return "break"
+
+        def on_release(e):
+            m = _MOD.get(e.keysym)
+            if m:
+                held.discard(m); show()
+            return "break"
+
+        dlg.bind("<KeyPress>", on_press)
+        dlg.bind("<KeyRelease>", on_release)
+        ttk.Button(dlg, text="Annuler", command=dlg.destroy).pack(pady=6)
+        dlg.focus_force()
+
     # ------------------------------------------------------------------- tabs
     def _tab_general(self, nb):
         t = ttk.Frame(nb)
@@ -96,8 +179,11 @@ class SettingsWindow:
                      state="readonly").pack(side="left", fill="x", expand=True)
         self.vars["mic_device"] = v
 
-        self._entry(t, "Raccourci (toggle)", "hotkey")
-        self._entry(t, "Raccourci quitter", "quit_hotkey")
+        self._hotkey_row(t, "Raccourci dictée", "hotkey")
+        self._hotkey_row(t, "Raccourci quitter (vide = aucun)", "quit_hotkey")
+        ttk.Label(t, text="Clique « Capturer… » puis appuie sur la combinaison voulue. "
+                  "Tu peux aussi taper « ctrl+alt+m », « Ctrl + Espace », « F9 »…",
+                  foreground="gray", wraplength=520).pack(anchor="w", pady=(0, 4))
         self._check(t, "Coller automatiquement le texte", "auto_paste")
         self._check(t, "Bip sonore début/fin", "beep")
         self._scale(t, "Volume des bips", "beep_volume", 0.0, 0.5)
@@ -186,11 +272,30 @@ class SettingsWindow:
 
     def _save(self):
         self._collect()
+        # raccourcis : validés et normalisés AVANT toute sauvegarde
+        for key, label in (("hotkey", "Raccourci dictée"), ("quit_hotkey", "Raccourci quitter")):
+            combo = (self.cfg.get(key) or "").strip()
+            if not combo:
+                if key == "hotkey":
+                    messagebox.showerror("Raccourci", "Le raccourci de dictée est requis.",
+                                         parent=self.win)
+                    return
+                self.cfg[key] = ""
+                continue
+            ok, msg = hotkeys.validate(combo)
+            if not ok:
+                messagebox.showerror("Raccourci invalide", f"{label} : {msg}", parent=self.win)
+                return
+            self.cfg[key] = msg  # forme canonique (ex. ctrl+space)
         merged = config.load()
         merged.update(self.cfg)
-        config.save(merged)
-        if self.on_save:
-            self.on_save(merged)
+        try:
+            if self.on_save:
+                self.on_save(merged)   # recharge le contrôleur (peut refuser)
+        except ValueError as exc:
+            messagebox.showerror("Réglages non appliqués", str(exc), parent=self.win)
+            return
+        config.save(merged)          # sauvegardé seulement si appliqué
         self.win.destroy()
 
 

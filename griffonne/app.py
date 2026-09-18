@@ -7,7 +7,7 @@ import time
 
 from pynput import keyboard as pk
 
-from . import config, vocab_builder, win
+from . import config, hotkeys, vocab_builder, win
 from .audio import Recorder
 from .backend import make_backend
 from .devices import resolve_mic
@@ -17,15 +17,6 @@ from .sound import play_cue
 # états
 LOADING, IDLE, RECORDING, BUSY, DISABLED = (
     "loading", "idle", "recording", "busy", "disabled")
-
-
-def _to_pynput_hotkey(combo: str) -> str:
-    """'ctrl+alt+space' -> '<ctrl>+<alt>+<space>' (format pynput)."""
-    parts = []
-    for p in combo.lower().split("+"):
-        p = p.strip()
-        parts.append(p if len(p) == 1 else f"<{p}>")
-    return "+".join(parts)
 
 
 class Griffonne:
@@ -50,10 +41,9 @@ class Griffonne:
             pass
 
     def _hotkey_vks(self) -> list[int]:
-        """Codes de touche virtuelle des touches « lettre/chiffre » du raccourci
-        (les modificateurs sont déjà surveillés par win.wait_keys_released)."""
-        return [ord(p.strip().upper()) for p in self.cfg["hotkey"].split("+")
-                if len(p.strip()) == 1]
+        """Codes VK des touches non-modificatrices du raccourci (les modificateurs
+        sont déjà surveillés par win.wait_keys_released)."""
+        return hotkeys.vk_codes(self.cfg["hotkey"])
 
     def _cue(self, kind: str) -> None:
         if self.cfg["beep"]:
@@ -75,20 +65,35 @@ class Griffonne:
         print(f"[griffonne] vocabulaire : {len(self.vocabulary)} termes")
         self.backend = make_backend(self.cfg, self.vocabulary)
         self.backend.warmup()
+        hk = (hotkeys.pretty(self.cfg["hotkey"]) if self._listener is not None
+              else "AUCUN (raccourci invalide, voir ci-dessus)")
         print(f"[griffonne] PRÊT en {time.time() - t0:.1f}s "
-              f"(device {self.backend.device}) — raccourci {self.cfg['hotkey']}")
+              f"(device {self.backend.device}) — raccourci : {hk}")
         self._set_state(DISABLED if not self.cfg["enabled"] else IDLE)
 
-    def _start_hotkeys(self) -> None:
-        hotkeys = {_to_pynput_hotkey(self.cfg["hotkey"]): self._safe_toggle}
+    def _build_listener(self, cfg: dict) -> pk.GlobalHotKeys:
+        """Construit le listener (non démarré). Lève ValueError si un raccourci
+        est invalide — AVANT de toucher au listener en place."""
+        table = {hotkeys.to_pynput(cfg["hotkey"]): self._safe_toggle}
         # Raccourci « quitter » désactivé par défaut : un raccourci global qui
         # tue l'app silencieusement est un piège (voisin du raccourci dictée).
-        quit_key = (self.cfg.get("quit_hotkey") or "").strip()
+        quit_key = (cfg.get("quit_hotkey") or "").strip()
         if quit_key:
-            hotkeys[_to_pynput_hotkey(quit_key)] = (
+            table[hotkeys.to_pynput(quit_key)] = (
                 lambda: self.shutdown("raccourci quitter"))
-        self._listener = pk.GlobalHotKeys(hotkeys)
-        self._listener.start()
+        return pk.GlobalHotKeys(table)
+
+    def _start_hotkeys(self) -> bool:
+        try:
+            listener = self._build_listener(self.cfg)
+        except ValueError as exc:
+            print(f"[griffonne] ⚠️  raccourci invalide « {self.cfg['hotkey']} » "
+                  f"({exc}) — AUCUN raccourci actif. Corrige-le dans Réglages.")
+            self._listener = None
+            return False
+        listener.start()
+        self._listener = listener
+        return True
 
     def _safe_toggle(self) -> None:
         threading.Thread(target=self.toggle, daemon=True).start()
@@ -149,7 +154,17 @@ class Griffonne:
 
     # --------------------------------------------------------------- contrôle
     def reload(self, new_cfg: dict) -> None:
-        """Applique une nouvelle config (réglages) : on recharge tout."""
+        """Applique une nouvelle config (réglages) : on recharge tout.
+        Les raccourcis sont validés AVANT d'arrêter l'ancien listener : un
+        raccourci invalide ne doit jamais faire perdre le clavier."""
+        for key in ("hotkey", "quit_hotkey"):
+            combo = (new_cfg.get(key) or "").strip()
+            if combo:
+                ok, msg = hotkeys.validate(combo)
+                if not ok:
+                    print(f"[griffonne] ⚠️  réglage refusé, raccourci « {combo} » "
+                          f"invalide : {msg}. L'ancien reste actif.")
+                    raise ValueError(f"Raccourci « {combo} » invalide : {msg}")
         print("[griffonne] rechargement de la configuration...")
         if self._listener is not None:
             self._listener.stop()
