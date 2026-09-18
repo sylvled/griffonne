@@ -4,7 +4,7 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 
 from . import config, hotkeys, vocab_builder
-from .devices import list_microphones
+from .devices import list_microphones, mic_label
 
 ENGINES = ["whisper", "parakeet"]
 MODELS = ["large-v3-turbo", "large-v3", "medium", "small", "base"]
@@ -167,13 +167,13 @@ class SettingsWindow:
         # micro
         f = self._row(t, "Micro")
         mics = list_microphones()
-        labels = ["Défaut système"] + [f"{m['index']}: {m['name']}" for m in mics]
-        self._mic_map = {f"{m['index']}: {m['name']}": m["index"] for m in mics}
+        labels = ["Défaut système"] + [mic_label(m) for m in mics]
+        self._mic_map = {mic_label(m): m["spec"] for m in mics}   # libellé -> "nom|API"
         cur = self.cfg.get("mic_device")
         sel = "Défaut système"
-        for lab, idx in self._mic_map.items():
-            if cur == idx:
-                sel = lab
+        for m in mics:   # retrouve la sélection : identifiant stable ou ancien index
+            if cur == m["spec"] or cur == m["index"]:
+                sel = mic_label(m)
         v = tk.StringVar(value=sel)
         ttk.Combobox(f, textvariable=v, values=labels,
                      state="readonly").pack(side="left", fill="x", expand=True)

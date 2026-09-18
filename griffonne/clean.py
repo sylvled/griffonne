@@ -25,6 +25,8 @@ def enforce_vocab(text: str, vocabulary: list[str] | None) -> str:
     if not text or not vocabulary:
         return text
     for term in vocabulary:
+        if len(term) < 3:      # « EN », « ST »... : trop risqué (mots courants)
+            continue
         text = re.sub(rf"\b{re.escape(term)}\b", term, text, flags=re.IGNORECASE)
     return text
 

@@ -23,6 +23,42 @@ def _add_cuda_dll_dirs() -> None:
             pass
 
 
+# Phrases que Whisper « invente » sur du silence ou du bruit (héritées de ses
+# données d'entraînement : fins de vidéos, sous-titres...).
+_HALLUCINATIONS = (
+    "merci d'avoir regardé", "merci d'avoir suivi", "sous-titres réalisés",
+    "sous-titrage", "abonnez-vous", "n'oubliez pas de vous abonner",
+    "amara.org", "thanks for watching", "thank you for watching",
+    "subscribe", "à la prochaine", "musique",
+)
+MIN_AUDIO_SECONDS = 0.5
+MIN_RMS = 0.002  # en dessous : silence (bruit de fond seulement)
+
+
+def audio_is_usable(audio: np.ndarray, samplerate: int = 16000) -> str | None:
+    """Renvoie la raison pour laquelle l'audio est inexploitable, sinon None."""
+    if audio is None or len(audio) < MIN_AUDIO_SECONDS * samplerate:
+        return "audio trop court"
+    rms = float(np.sqrt(np.mean(np.square(audio.astype(np.float32)))))
+    if rms < MIN_RMS:
+        return f"silence (niveau {rms:.4f})"
+    return None
+
+
+def is_hallucination(text: str, initial_prompt: str | None) -> bool:
+    """Texte typique d'une hallucination de Whisper (silence/bruit)."""
+    t = " ".join(text.lower().split())
+    if not t:
+        return False
+    if any(h in t for h in _HALLUCINATIONS):
+        return True
+    if initial_prompt:  # écho de l'amorce (« Dictée vocale en français. »)
+        base = " ".join(initial_prompt.lower().split(" vocabulaire :")[0].split())
+        if base and (t == base or t.rstrip(".!") == base.rstrip(".!")):
+            return True
+    return False
+
+
 def _postprocess(text: str, clean_fillers: bool, replacements, vocabulary) -> str:
     """Post-traitement commun à tous les moteurs : hésitations, remplacements
     déterministes, puis casse exacte du vocabulaire (effective même sans LLM)."""
@@ -74,6 +110,9 @@ class LocalEngine:
             initial_prompt=self.initial_prompt,
         )
         text = "".join(seg.text for seg in segments).strip()
+        if is_hallucination(text, self.initial_prompt):
+            print(f"[engine] hallucination Whisper ignorée : {text!r}")
+            return ""
         return _postprocess(text, self.clean_fillers, self.replacements,
                             self.vocabulary)
 
@@ -109,9 +148,13 @@ class ParakeetEngine:
     def transcribe(self, audio: np.ndarray) -> str:
         if audio is None or len(audio) == 0:
             return ""
-        text = self.model.recognize(np.ascontiguousarray(audio, dtype=np.float32))
-        return _postprocess((text or "").strip(), self.clean_fillers,
-                            self.replacements, self.vocabulary)
+        text = (self.model.recognize(np.ascontiguousarray(audio, dtype=np.float32))
+                or "").strip()
+        if is_hallucination(text, None):
+            print(f"[engine] hallucination ignorée : {text!r}")
+            return ""
+        return _postprocess(text, self.clean_fillers, self.replacements,
+                            self.vocabulary)
 
 
 def make_engine(engine: str, **kwargs):

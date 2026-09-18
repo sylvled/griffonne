@@ -45,13 +45,33 @@ class Griffonne:
         sont déjà surveillés par win.wait_keys_released)."""
         return hotkeys.vk_codes(self.cfg["hotkey"])
 
+    def _log_mic(self, idx) -> None:
+        """Trace le micro réellement utilisé (le réglage peut ne plus exister)."""
+        try:
+            from .devices import list_microphones, mic_label
+            mics = list_microphones()
+            if idx is None:
+                dflt = next((m for m in mics if m["default"]), None)
+                print("[griffonne] micro : défaut Windows"
+                      + (f" → {mic_label(dflt)}" if dflt else ""))
+            else:
+                m = next((m for m in mics if m["index"] == idx), None)
+                print(f"[griffonne] micro : {mic_label(m) if m else f'index {idx}'}")
+            if self.cfg["mic_device"] and idx is None:
+                print(f"[griffonne] ⚠️  micro configuré « {self.cfg['mic_device']} » "
+                      "introuvable (déconnecté ?) — repli sur le défaut Windows")
+        except Exception as exc:  # noqa: BLE001
+            print(f"[griffonne] micro : (info indisponible : {exc!r})")
+
     def _cue(self, kind: str) -> None:
         if self.cfg["beep"]:
             play_cue(kind, self.cfg["beep_volume"])
 
     # ------------------------------------------------------------------ cycle
     def start(self) -> None:
-        self.recorder = Recorder(device=resolve_mic(self.cfg["mic_device"]))
+        idx = resolve_mic(self.cfg["mic_device"])
+        self.recorder = Recorder(device=idx)
+        self._log_mic(idx)
         threading.Thread(target=self._load_backend, daemon=True).start()
         self._start_hotkeys()
 
@@ -127,6 +147,12 @@ class Griffonne:
     def _finish(self) -> None:
         audio = self.recorder.stop()
         dur = len(audio) / self.recorder.sr
+        from .engine import audio_is_usable
+        why = audio_is_usable(audio, self.recorder.sr)
+        if why:
+            print(f"[griffonne] ⏭️  dictée ignorée : {why} ({dur:.1f}s)")
+            self._set_state(IDLE if self.cfg["enabled"] else DISABLED)
+            return
         print(f"[griffonne] ⏳ traitement ({dur:.1f}s d'audio)...")
         t0 = time.time()
         try:

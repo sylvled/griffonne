@@ -23,8 +23,9 @@ _TEXT_EXT = {".md", ".markdown", ".txt", ".rst", ".org"}
 _SKIP_DIRS = {".git", ".venv", "venv", "node_modules", "__pycache__",
               ".cache", "dist", "build", ".idea", ".vscode", "site-packages"}
 
-# acronymes en majuscules (NASA, GPU, HTML...)
-_ACRONYM = re.compile(r"\b[A-Z]{2,6}\b")
+# acronymes en majuscules (NASA, GPU, HTML...) — 3 lettres minimum : les
+# tokens de 2 lettres (EN, ST, CI...) sont trop souvent des mots courants
+_ACRONYM = re.compile(r"\b[A-Z]{3,6}\b")
 # identifiants en casse mixte (GitHub, PostgreSQL, iPhone, macOS...)
 _MIXED = re.compile(r"\b(?:[A-Z]{2,}[a-z]\w*|[a-z]+[A-Z]\w*|[A-Z][a-z]+[A-Z]\w*)\b")
 
@@ -36,6 +37,15 @@ _STOP = {
     "GET", "POST", "PUT", "ID", "OK", "UTF", "ASCII", "PEP", "UTC", "ISO",
 }
 
+# mots courants qui peuvent apparaître en majuscules dans une dictée : jamais
+# appris comme vocabulaire (sinon la casse forcée les impose partout)
+_COMMON = {
+    "LES", "DES", "UNE", "PAR", "SUR", "OUI", "NON", "PAS", "MAIS", "TOUT", "TOUS",
+    "AVEC", "DANS", "POUR", "PLUS", "SANS", "SOUS", "VERS", "CES", "SES", "MES",
+    "TES", "NOS", "VOS", "EST", "ONT", "FIN", "BON", "MAL", "BAS", "QUE", "QUI",
+    "QUOI", "DONC", "ALORS", "AUSSI", "BIEN", "TRES", "TRÈS", "PEU", "ICI",
+    "THE", "AND", "FOR", "YOU", "ARE", "NOT", "BUT", "ALL", "ANY", "CAN", "HAS",
+}
 _MAX_FILES = 3000
 _MAX_BYTES = 200_000
 
@@ -43,10 +53,10 @@ _MAX_BYTES = 200_000
 def _candidates(text: str) -> list[str]:
     found = []
     for m in _ACRONYM.findall(text):
-        if m not in _STOP and len(m) >= 2:
+        if m not in _STOP and m not in _COMMON:
             found.append(m)
     for m in _MIXED.findall(text):
-        if m not in _STOP and 2 <= len(m) <= 30:
+        if m not in _STOP and 3 <= len(m) <= 30:
             found.append(m)
     return found
 
