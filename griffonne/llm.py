@@ -4,6 +4,8 @@ propre à l'utilisateur (fourni en liste). Tout est local et gratuit.
 
 Si Ollama est indisponible, on renvoie le texte d'origine (jamais de plantage)."""
 import json
+import threading
+import time
 import urllib.request
 
 _RULES_CONSERVATIVE = (
@@ -92,6 +94,7 @@ class Corrector:
         self.mode = mode
         self.vocabulary = vocabulary or []
         self.system = _build_system(mode, self.vocabulary)
+        self._preloading = False
 
     def _call(self, text: str, timeout: float, wrap: bool = True) -> str:
         user = f"<transcription>\n{text}\n</transcription>" if wrap else text
@@ -143,3 +146,45 @@ class Corrector:
                 self._call("ok", timeout=120, wrap=False)
             except Exception:  # noqa: BLE001
                 pass
+
+    # ------------------------------------------------------------- préchargement
+    def is_loaded(self) -> bool:
+        """Le modèle est-il déjà résident (aucun coût à froid à prévoir) ?"""
+        if not self.enabled:
+            return False
+        try:
+            with urllib.request.urlopen(self.url + "/api/ps", timeout=1.5) as r:
+                running = json.loads(r.read().decode("utf-8")).get("models", [])
+            return any(m.get("name") == self.model or m.get("model") == self.model
+                       for m in running)
+        except Exception:  # noqa: BLE001
+            return False
+
+    def preload(self) -> None:
+        """Charge le modèle SANS rien générer (requête Ollama sans message).
+        Appelé dès le début de l'enregistrement : les ~4 s de chargement à
+        froid se déroulent pendant que l'utilisateur parle."""
+        if not self.enabled or self._preloading:
+            return
+        self._preloading = True
+
+        def run():
+            try:
+                if self.is_loaded():
+                    return
+                t0 = time.time()
+                payload = {"model": self.model, "messages": [],
+                           "stream": False, "keep_alive": self.keep_alive}
+                req = urllib.request.Request(
+                    self.url + "/api/chat", data=json.dumps(payload).encode("utf-8"),
+                    headers={"Content-Type": "application/json"})
+                with urllib.request.urlopen(req, timeout=180) as r:
+                    r.read()
+                print(f"[llm] modèle préchargé en {time.time() - t0:.1f}s "
+                      "(pendant l'enregistrement)")
+            except Exception as exc:  # noqa: BLE001
+                print(f"[llm] préchargement ignoré ({exc!r})")
+            finally:
+                self._preloading = False
+
+        threading.Thread(target=run, daemon=True).start()

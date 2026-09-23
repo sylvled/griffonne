@@ -67,7 +67,9 @@ DEFAULTS = {
     # d'abord IPv6 (::1) alors qu'Ollama n'écoute qu'en IPv4 -> ~2 s perdues
     # par appel avant le repli. Mesuré : 2,36 s -> 0,16 s.
     "ollama_url": "http://127.0.0.1:11434",
-    "llm_keep_alive": "30m",      # garde le modèle en VRAM (évite les rechargements)
+    "llm_keep_alive": -1,         # -1 = modèle résident tant qu'Ollama tourne.
+                                  # Décharger n'apporte rien : Ollama évince
+                                  # déjà le modèle si un autre en a besoin.
 
     # --- mode distant ---
     # CLIENT : où joindre le serveur de transcription.

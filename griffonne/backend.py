@@ -5,6 +5,7 @@
 
 Le même LocalBackend sert à l'app locale ET au serveur distant."""
 import json
+import threading
 import urllib.request
 
 import numpy as np
@@ -39,6 +40,12 @@ class LocalBackend:
     def warmup(self) -> None:
         if self.corrector is not None:
             self.corrector.warmup()
+
+    def preload(self) -> None:
+        """Prépare le LLM pendant l'enregistrement (aucun effet s'il est déjà
+        résident). Gratuit côté appelant : non bloquant."""
+        if self.corrector is not None:
+            self.corrector.preload()
 
     def process(self, audio: np.ndarray) -> str:
         text = self.engine.transcribe(audio)

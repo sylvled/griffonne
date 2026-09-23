@@ -132,6 +132,9 @@ class Griffonne:
         if self.state == IDLE:
             self._set_state(RECORDING)
             self.recorder.start()
+            # le chargement du LLM (~4 s à froid) se fait pendant qu'on parle
+            if self.backend is not None and hasattr(self.backend, "preload"):
+                self.backend.preload()
             self._cue("start")
             print("[griffonne] 🎙️  enregistrement...")
         elif self.state == RECORDING:
