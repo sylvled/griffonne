@@ -196,6 +196,8 @@ class SettingsWindow:
         self._entry(t, "Modèle LLM (Ollama)", "llm_model")
         self._combo(t, "Mode LLM", "llm_mode", LLM_MODES)
         self._entry(t, "URL Ollama", "ollama_url")
+        self._check(t, "Modes de dictée (dire « Mail, ... » rédige un e-mail)",
+                    "modes_enabled")
         ttk.Label(t, text="Mode conservateur = corrige sans reformuler.\n"
                   "Mode light = nettoie aussi le style oral.",
                   foreground="gray").pack(anchor="w", pady=6)

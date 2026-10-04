@@ -58,6 +58,37 @@ DEFAULTS = {
     "beep_volume": 0.05,         # volume des bips (0.0 = muet, 1.0 = max)
     "clean_fillers": True,       # supprime hésitations (euh, heu...) et bégaiements
 
+    # --- modes de dictée (mot déclencheur en début de dictée) ---
+    # « Mail, préviens Paul que... » → le texte brut est RÉÉCRIT en message
+    # structuré. Les autres dictées restent transcrites fidèlement.
+    "modes_enabled": True,
+    "modes": {
+        "mail": {
+            "triggers": ["mail", "e-mail", "email", "courriel", "mél"],
+            "model": "",          # vide = même modèle que la correction
+            "prompt": "\n".join((
+                "Tu rédiges un e-mail professionnel en français à partir de "
+                "notes dictées à voix haute, brutes et désordonnées.",
+                "RÈGLES :",
+                "- Structure, dans cet ordre EXACT : (1) la toute première "
+                "ligne est « Objet : ... » ; (2) une ligne vide ; (3) la "
+                "salutation ; (4) le corps en paragraphes courts ; (5) une "
+                "formule de politesse. Rien d'autre.",
+                "- Ne signe pas et n'ajoute aucun espace réservé du type "
+                "« [Votre Nom] » : termine par la formule de politesse.",
+                "- N'INVENTE AUCUN FAIT : aucun nom, date, chiffre, montant ou "
+                "engagement qui ne soit pas dans les notes. Si le destinataire "
+                "n'est pas nommé, écris simplement « Bonjour, ».",
+                "- Conserve TOUTES les informations des notes, sans en ajouter.",
+                "- Vouvoiement par défaut ; tutoie seulement si les notes "
+                "tutoient.",
+                "- Style clair et courtois, phrases directes. Pas de markdown, "
+                "pas d'astérisques.",
+                "- Ne commente pas ton travail : réponds UNIQUEMENT par l'e-mail.",
+            )),
+        },
+    },
+
     # --- correction LLM locale (Ollama) ---
     "llm_correct": True,          # relecture/correction par LLM local
     "llm_model": "qwen2.5:3b",    # modèle Ollama (petit = rapide)

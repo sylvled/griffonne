@@ -115,6 +115,41 @@ substitutions de noms propres.
 
 ---
 
+## Modes de dictée : dicter un e-mail
+
+Un mot déclencheur en **début** de dictée change le traitement. Par défaut,
+Griffonne transcrit fidèlement ; en commençant par « **Mail** », le texte dicté
+— même brut et désordonné — est **réécrit** en message structuré :
+
+> *« Mail, préviens l'équipe que le serveur redémarre jeudi soir vers 20 h,
+> et qu'il faut sauvegarder avant. »*
+
+```
+Objet : Redémarrage du serveur jeudi soir
+
+Bonjour,
+
+Je vous informe que le serveur redémarrera jeudi soir vers 20h.
+Veuillez donc faire une sauvegarde avant cette période.
+
+Cordialement,
+```
+
+Déclencheurs reconnus : `mail`, `e-mail`, `email`, `courriel`, `mél` (insensible
+aux accents, à la casse et à la ponctuation qui suit). Le mot déclencheur est
+retiré du message.
+
+Le modèle reçoit la consigne de **n'inventer aucun fait** (ni nom, ni date, ni
+chiffre absent de la dictée) et de ne pas signer. Les garde-fous
+anti-emballement de la correction ordinaire sont volontairement levés ici,
+puisque la réécriture restructure légitimement le texte.
+
+Réglage : *Réglages → Correction → Modes de dictée*. Les modes, leurs
+déclencheurs, leur modèle et leur consigne sont décrits dans la clé `modes` de
+la configuration — en ajouter d'autres ne demande aucun code.
+
+---
+
 ## Sans GPU
 
 Choisis le moteur **Parakeet** (préréglage `config.cpu.json`, appliqué par

@@ -36,6 +36,7 @@ class LocalBackend:
                 keep_alive=cfg.get("llm_keep_alive", "30m"),
             )
         self.llm_min_words = cfg.get("llm_min_words", 0)
+        self.cfg = cfg          # modes de dictée (mot déclencheur)
 
     def warmup(self) -> None:
         if self.corrector is not None:
@@ -49,7 +50,23 @@ class LocalBackend:
 
     def process(self, audio: np.ndarray) -> str:
         text = self.engine.transcribe(audio)
-        if (text and self.corrector is not None
+        if not text:
+            return text
+
+        # mode de dictée ? (« Mail, ... » → réécriture au lieu de transcription)
+        from . import modes
+        mode, body = modes.detect(text, self.cfg)
+        if mode:
+            spec = (self.cfg.get("modes") or {}).get(mode, {})
+            if self.corrector is None:
+                print(f"[mode] « {mode} » demandé mais la correction LLM est "
+                      "désactivée — texte transcrit tel quel")
+                return text
+            print(f"[mode] {mode} → réécriture ({len(body.split())} mots dictés)")
+            return self.corrector.rewrite(
+                body, spec.get("prompt", ""), model=spec.get("model") or None)
+
+        if (self.corrector is not None
                 and len(text.split()) >= self.llm_min_words):
             text = self.corrector.correct(text)
         return text

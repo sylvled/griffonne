@@ -4,6 +4,7 @@ propre à l'utilisateur (fourni en liste). Tout est local et gratuit.
 
 Si Ollama est indisponible, on renvoie le texte d'origine (jamais de plantage)."""
 import json
+import re
 import threading
 import time
 import urllib.request
@@ -135,6 +136,43 @@ class Corrector:
         reason = looks_runaway(text, out, self.vocabulary) if out else "sortie vide"
         if reason:
             print(f"[llm] sortie aberrante ignorée ({reason}) — texte brut conservé")
+            return text
+        from .clean import enforce_vocab
+        return enforce_vocab(out, self.vocabulary)
+
+    def rewrite(self, text: str, system: str, model: str | None = None,
+                timeout: float = 120.0) -> str:
+        """Réécriture libre (mode « mail »...) : le texte est RESTRUCTURÉ, donc
+        les garde-fous anti-emballement de `correct()` ne s'appliquent pas.
+        Seul un filet minimal reste : sortie vide ou démesurée → texte d'origine."""
+        if not self.enabled or not text:
+            return text
+        payload = {
+            "model": model or self.model,
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": text},
+            ],
+            "stream": False,
+            "options": {"temperature": 0.3},   # un peu de souplesse rédactionnelle
+            "keep_alive": self.keep_alive,
+        }
+        try:
+            req = urllib.request.Request(
+                self.url + "/api/chat",
+                data=json.dumps(payload).encode("utf-8"),
+                headers={"Content-Type": "application/json"})
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                out = json.loads(r.read().decode("utf-8"))["message"]["content"]
+        except Exception as exc:  # noqa: BLE001
+            print(f"[llm] réécriture impossible ({exc!r}) — texte brut conservé")
+            return text
+        out = out.strip()
+        # modèles « raisonneurs » : on retire le bloc de réflexion
+        out = re.sub(r"<think>.*?</think>", "", out, flags=re.S).strip()
+        out = out.strip('"').strip()
+        if not out or len(out) > max(4000, len(text) * 12):
+            print("[llm] réécriture aberrante ignorée — texte brut conservé")
             return text
         from .clean import enforce_vocab
         return enforce_vocab(out, self.vocabulary)

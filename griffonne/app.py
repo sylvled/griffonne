@@ -85,6 +85,8 @@ class Griffonne:
         print(f"[griffonne] vocabulaire : {len(self.vocabulary)} termes")
         self.backend = make_backend(self.cfg, self.vocabulary)
         self.backend.warmup()
+        from . import modes as _modes
+        print(f"[griffonne] modes de dictée : {_modes.describe(self.cfg)}")
         hk = (hotkeys.pretty(self.cfg["hotkey"]) if self._listener is not None
               else "AUCUN (raccourci invalide, voir ci-dessus)")
         print(f"[griffonne] PRÊT en {time.time() - t0:.1f}s "
