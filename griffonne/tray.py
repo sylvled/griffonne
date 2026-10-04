@@ -120,6 +120,11 @@ class TrayApp:
 
 
 def main():
+    from . import win
+    if not win.single_instance():
+        print("[griffonne] une instance tourne déjà — rien à faire. "
+              "(Icône dans la barre des tâches.)")
+        return
     try:
         TrayApp().run()
     except Exception as exc:  # noqa: BLE001 — repli console si l'UI échoue

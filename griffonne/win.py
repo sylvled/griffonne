@@ -131,3 +131,30 @@ def focus_window(hwnd, control=None) -> bool:
         return ok
     except Exception:  # noqa: BLE001
         return False
+
+
+# --- instance unique -------------------------------------------------------
+_MUTEX = None          # garde la référence : le mutex vit aussi longtemps que
+                       # le processus, et Windows le libère à sa fermeture
+_ERROR_ALREADY_EXISTS = 183
+
+
+def single_instance(name: str = "Griffonne") -> bool:
+    """True si nous sommes la seule instance, False si une autre tourne déjà.
+
+    Évite qu'un lancement depuis le menu Démarrer ne double l'instance lancée
+    au démarrage de session (deux écoutes du raccourci = comportement erratique).
+    """
+    global _MUTEX
+    if not _WIN:
+        return True
+    try:
+        handle = _kernel32.CreateMutexW(None, True, f"{name}-single-instance")
+        if not handle:
+            return True                      # en cas de doute, on laisse passer
+        if _kernel32.GetLastError() == _ERROR_ALREADY_EXISTS:
+            return False
+        _MUTEX = handle
+        return True
+    except Exception:  # noqa: BLE001
+        return True

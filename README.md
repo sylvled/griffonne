@@ -37,6 +37,7 @@ la passe LLM).
 | Dicter avec les logs visibles (le plus simple) | `run.bat` |
 | L'app complète (icône barre des tâches + réglages) | `run_tray.bat` |
 | Le démarrage automatique à l'ouverture de session | `install_autostart.bat` |
+| Pouvoir lancer depuis le menu Démarrer (recherche « griffonne ») | `install_startmenu.bat` |
 | Le serveur de transcription (mode distant) | `serve.bat` |
 
 Au premier lancement le modèle se télécharge (~1,6 Go pour Whisper turbo,
@@ -48,6 +49,8 @@ Au premier lancement le modèle se télécharge (~1,6 Go pour Whisper turbo,
 2. **Ctrl+Alt+M** → parle (bip aigu).
 3. **Ctrl+Alt+M** → fin (bip grave). Le texte corrigé se colle tout seul.
 4. Pour quitter : menu de l'icône → **Quitter**.
+
+Une seule instance peut tourner à la fois : relancer l'application alors qu'elle est déjà active ne crée pas de doublon (le second lancement se termine immédiatement).
 
 Couleur de l'icône : 🟡 chargement · 🟢 prêt · 🔴 enregistrement ·
 🔵 transcription · ⚪ désactivée.

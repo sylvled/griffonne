@@ -217,6 +217,10 @@ class Griffonne:
 
 
 def main() -> None:
+    if not win.single_instance():
+        print("[griffonne] une instance tourne déjà — rien à faire. "
+              "(Icône dans la barre des tâches.)")
+        return
     Griffonne().run_console()
 
 
