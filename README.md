@@ -135,14 +135,38 @@ Veuillez donc faire une sauvegarde avant cette période.
 Cordialement,
 ```
 
-Déclencheurs reconnus : `mail`, `e-mail`, `email`, `courriel`, `mél` (insensible
-aux accents, à la casse et à la ponctuation qui suit). Le mot déclencheur est
-retiré du message.
+### Les modes disponibles
 
-Le modèle reçoit la consigne de **n'inventer aucun fait** (ni nom, ni date, ni
-chiffre absent de la dictée) et de ne pas signer. Les garde-fous
-anti-emballement de la correction ordinaire sont volontairement levés ici,
-puisque la réécriture restructure légitimement le texte.
+| Je commence par… | Résultat |
+|---|---|
+| **Mail** (`e-mail`, `courriel`, `mél`) | E-mail complet : objet, salutation, corps, formule de politesse |
+| **Message** (`chat`, `teams`) | Message court et direct, sans objet ni signature |
+| **Note** (`compte rendu`, `notes`) | Compte rendu : titre, puces par thème, section « À faire » |
+| **Résumé** (`synthèse`) | 3 à 6 puces, l'essentiel seulement |
+| **Anglais** (`english`, `traduction`) | Traduction en anglais professionnel |
+| **Ticket** (`incident`, `bug`) | Signalement : titre, contexte, problème, étapes, impact |
+
+Les déclencheurs sont insensibles aux accents, à la casse et à la ponctuation
+qui suit ; ils ne se déclenchent qu'en **premier mot** et sont retirés du
+résultat. « Mailler les pièces », « Noter que… » ou « En anglais on dirait… »
+restent donc transcrits fidèlement.
+
+Chaque mode a sa consigne, son modèle et sa température : basse pour les modes
+qui restructurent des faits (une « créativité » s'y traduit par des
+inventions), un peu plus souple pour la rédaction. La mise en forme parasite
+que les petits modèles ajoutent malgré la consigne (gras markdown, puces mal
+espacées, séparateurs) est nettoyée de façon déterministe.
+
+> **Limite assumée** : avec un modèle de 3 milliards de paramètres, les modes
+> qui restructurent des faits (`note`, `ticket`) peuvent occasionnellement
+> ajouter une nuance non dictée. Pour un usage où la fidélité est critique,
+> relis avant d'envoyer — ou désigne un modèle plus grand via la clé `model`
+> du mode (au prix de la latence et d'une éviction du modèle de correction).
+>
+> Un mode « prompt » (reformuler une consigne pour une IA) a été testé puis
+> **écarté** : le petit modèle inventait des exigences, et un modèle plus grand
+> coûtait 18 s par dictée. Pour dicter à un assistant, la transcription fidèle
+> est de toute façon préférable.
 
 Réglage : *Réglages → Correction → Modes de dictée*. Les modes, leurs
 déclencheurs, leur modèle et leur consigne sont décrits dans la clé `modes` de

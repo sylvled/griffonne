@@ -82,6 +82,26 @@ def looks_runaway(text_in: str, text_out: str, vocabulary: list[str]) -> str | N
     return None
 
 
+def _tidy_markup(text: str) -> str:
+    """Nettoie la mise en forme que les petits modèles ajoutent malgré la
+    consigne : gras markdown, puces mal espacées, titres dièse. Déterministe —
+    plus fiable que d'espérer l'obéissance du modèle."""
+    text = re.sub(r"\*\*(.+?)\*\*", r"\1", text)        # **gras**
+    text = re.sub(r"(?<!\w)\*(?!\s)(.+?)(?<!\s)\*(?!\w)", r"\1", text)  # *italique*
+    text = re.sub(r"(?m)^[ \t]*#{1,6}[ \t]*", "", text)        # # titres
+    # [ \t] et non \s : \s traverserait les retours à la ligne et fusionnerait
+    # deux puces consécutives en une seule.
+    text = re.sub(r"(?m)^[ \t]*-[ \t]*-[ \t]*-[ \t]*$", "", text)  # « - - - »
+    text = re.sub(r"(?m)^[ \t]*[-*•][ \t]*$", "", text)            # puce vide
+    text = re.sub(r"(?m)^[ \t]*[-*•][ \t]*", "- ", text)           # puces normalisées
+    text = re.sub(r"(?m)[ \t]+-[ \t]*$", "", text)                 # tiret orphelin en fin de ligne
+    # signatures fictives que les modèles ajoutent malgré la consigne :
+    # une ligne entièrement composée d'un espace réservé entre crochets.
+    text = re.sub(r"(?m)^[ \t]*[\[<][^\]>\n]{0,40}[\]>][ \t]*$", "", text)
+    text = re.sub(r"(?m)[ \t]+$", "", text)                        # espaces en fin de ligne
+    return re.sub(r"\n{3,}", "\n\n", text).strip()
+
+
 class Corrector:
     def __init__(self, model="qwen2.5:3b", mode="conservative",
                  url="http://127.0.0.1:11434", enabled=True, vocabulary=None,
@@ -141,7 +161,7 @@ class Corrector:
         return enforce_vocab(out, self.vocabulary)
 
     def rewrite(self, text: str, system: str, model: str | None = None,
-                timeout: float = 120.0) -> str:
+                timeout: float = 120.0, temperature: float = 0.0) -> str:
         """Réécriture libre (mode « mail »...) : le texte est RESTRUCTURÉ, donc
         les garde-fous anti-emballement de `correct()` ne s'appliquent pas.
         Seul un filet minimal reste : sortie vide ou démesurée → texte d'origine."""
@@ -154,7 +174,16 @@ class Corrector:
                 {"role": "user", "content": text},
             ],
             "stream": False,
-            "options": {"temperature": 0.3},   # un peu de souplesse rédactionnelle
+            # Température basse pour les modes qui restructurent des faits :
+            # toute « créativité » s'y traduit par des inventions. Jamais 0
+            # strict : le décodage glouton peut partir en boucle.
+            # num_predict : plafond généreux mais borné — sans lui, une boucle
+            # tourne jusqu'au timeout (mesuré : 120 s de blocage).
+            "options": {
+                "temperature": temperature,
+                "repeat_penalty": 1.15,
+                "num_predict": max(400, int(len(text) / 3.5 * 6)),
+            },
             "keep_alive": self.keep_alive,
         }
         try:
@@ -171,6 +200,7 @@ class Corrector:
         # modèles « raisonneurs » : on retire le bloc de réflexion
         out = re.sub(r"<think>.*?</think>", "", out, flags=re.S).strip()
         out = out.strip('"').strip()
+        out = _tidy_markup(out)
         if not out or len(out) > max(4000, len(text) * 12):
             print("[llm] réécriture aberrante ignorée — texte brut conservé")
             return text

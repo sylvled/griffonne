@@ -66,6 +66,7 @@ DEFAULTS = {
         "mail": {
             "triggers": ["mail", "e-mail", "email", "courriel", "mél"],
             "model": "",          # vide = même modèle que la correction
+            "temperature": 0.2,  # souplesse rédactionnelle
             "prompt": "\n".join((
                 "Tu rédiges un e-mail professionnel en français à partir de "
                 "notes dictées à voix haute, brutes et désordonnées.",
@@ -85,6 +86,142 @@ DEFAULTS = {
                 "- Style clair et courtois, phrases directes. Pas de markdown, "
                 "pas d'astérisques.",
                 "- Ne commente pas ton travail : réponds UNIQUEMENT par l'e-mail.",
+            )),
+        },
+        # Variante rédactionnelle du mode « mail » : même structure, mais le
+        # modèle est autorisé à passer du registre oral à l'écrit. À comparer
+        # à l'usage avec « mail » — plus propre, mais il reformule davantage.
+        "mail_soigne": {
+            "triggers": ["mail soigné", "mail propre", "beau mail",
+                         "e-mail soigné"],
+            "model": "",
+            "temperature": 0.2,
+            "prompt": "\n".join((
+                "Tu rédiges un e-mail professionnel en français à partir de "
+                "notes dictées à voix haute, brutes et désordonnées.",
+                "RÈGLES :",
+                "- Structure, dans cet ordre EXACT : (1) la toute première "
+                "ligne est « Objet : ... » ; (2) une ligne vide ; (3) la "
+                "salutation ; (4) le corps en paragraphes courts ; (5) une "
+                "formule de politesse. Rien d'autre.",
+                "- Ne signe pas et n'ajoute aucun espace réservé du type "
+                "« [Votre Nom] ».",
+                "- RÈGLE DE FIDÉLITÉ, PRIORITAIRE SUR TOUTES LES AUTRES : "
+                "chaque idée dictée doit se retrouver dans l'e-mail — en "
+                "particulier les refus, réserves, conditions et regrets. Ne "
+                "supprime, ne fusionne et ne résume JAMAIS une phrase porteuse "
+                "d'information. N'ajoute aucune phrase d'introduction, question "
+                "ou conclusion qui ne soit pas dictée.",
+                "- Les notes sont dictées à l'oral. Tu es autorisé à faire "
+                "SEULEMENT ces quatre retouches de forme : (a) supprimer les "
+                "connecteurs oraux en début de phrase (« Et », « Et donc », "
+                "« En fait », « Alors », « Du coup », « Voilà ») ; (b) supprimer "
+                "une répétition immédiate (« de notre côté, côté X » → « Du côté "
+                "X ») ; (c) corriger la grammaire et les accords ; (d) écrire "
+                "« X est un Y » au lieu de « X, c'est un Y ». Rien d'autre.",
+                "- Ces retouches changent la forme, jamais le fond : à part "
+                "elles, reprends les phrases de la dictée telles quelles.",
+                "- N'INVENTE AUCUN FAIT : aucun nom, date, chiffre ou "
+                "engagement absent des notes. Si le destinataire n'est pas "
+                "nommé, écris simplement « Bonjour, ».",
+                "- Vouvoiement par défaut ; tutoie seulement si les notes "
+                "tutoient. Pas de markdown.",
+                "- Réponds UNIQUEMENT par l'e-mail.",
+            )),
+        },
+        "message": {
+            "triggers": ["message", "chat", "teams"],
+            "model": "",
+            "temperature": 0.2,  # souplesse rédactionnelle
+            "prompt": "\n".join((
+                "Tu rédiges un message court et direct, destiné à une messagerie "
+                "professionnelle (Teams, Slack), à partir de notes dictées.",
+                "RÈGLES :",
+                "- Pas d'objet, pas de salutation cérémonieuse, pas de signature. "
+                "Va droit au but.",
+                "- Ton courtois et naturel, phrases brèves. Deux ou trois "
+                "phrases suffisent le plus souvent.",
+                "- Passe du registre oral à l'écrit : supprime les connecteurs "
+                "de l'oral en début de phrase (« Et », « Du coup », « En "
+                "fait »), les répétitions et les fragments inachevés ; corrige "
+                "la grammaire. Cela ne retire aucune information.",
+                "- N'invente aucun fait ; conserve toutes les informations.",
+                "- Pas de markdown ni d'astérisques.",
+                "- Réponds UNIQUEMENT par le message.",
+            )),
+        },
+        "note": {
+            "triggers": ["note", "compte rendu", "notes"],
+            "model": "",
+            "temperature": 0.1,  # fidélité stricte
+            "prompt": "\n".join((
+                "Tu mets en forme des notes dictées en un compte rendu clair en "
+                "français.",
+                "RÈGLES :",
+                "- Structure : un titre court en première ligne, puis des puces "
+                "commençant par « - », regroupées par thème.",
+                "- Si des actions à faire apparaissent, termine par une section "
+                "« À faire : » avec une puce par action.",
+                "- N'invente aucun fait ; conserve TOUTES les informations.",
+                "- Pas d'astérisques ni de numérotation inutile.",
+                "- Réponds UNIQUEMENT par le compte rendu.",
+            )),
+        },
+        "resume": {
+            "triggers": ["résumé", "resume", "synthèse"],
+            "model": "",
+            "temperature": 0.1,  # fidélité stricte
+            "prompt": "\n".join((
+                "Tu résumes en français des propos dictés.",
+                "RÈGLES :",
+                "- Ne garde que l'essentiel : points clés, décisions, chiffres.",
+                "- Trois à six puces « - » au maximum, une idée par puce.",
+                "- N'ajoute AUCUNE information absente des propos.",
+                "- Pas d'introduction ni de conclusion : réponds UNIQUEMENT par "
+                "le résumé.",
+            )),
+        },
+        "anglais": {
+            "triggers": ["anglais", "english", "traduction"],
+            "model": "",
+            "temperature": 0.1,  # fidélité stricte
+            "prompt": "\n".join((
+                "You translate dictated French notes into clear, professional "
+                "English.",
+                "RULES:",
+                "- Keep the meaning and ALL the information. Add nothing.",
+                "- Keep technical terms, product names and proper nouns "
+                "unchanged.",
+                "- Natural, idiomatic English; no markdown.",
+                "- Answer with the translation ONLY.",
+            )),
+        },
+        "ticket": {
+            "triggers": ["ticket", "incident", "bug"],
+            "model": "",
+            "temperature": 0.1,  # fidélité stricte
+            "prompt": "\n".join((
+                "Tu rédiges un signalement d'incident clair en français à partir "
+                "de notes dictées.",
+                "RÈGLES :",
+                "- Première ligne : « Titre : ... » (une phrase courte et "
+                "factuelle).",
+                "- Puis UNIQUEMENT les sections que la dictée renseigne "
+                "explicitement, parmi : « Contexte », « Problème constaté », "
+                "« Étapes pour reproduire », « Impact ».",
+                "- INTERDIT ABSOLU d'inventer : n'ajoute jamais une étape, une "
+                "manipulation, un message d'erreur, une cause ou une "
+                "conséquence qui n'a pas été dictée. En particulier, n'écris "
+                "une section « Étapes pour reproduire » QUE si la dictée décrit "
+                "des manipulations précises ; sinon, omets-la entièrement.",
+                "- Chaque phrase doit correspondre à une information réellement "
+                "présente dans la dictée. Aucune supposition sur l'usage du "
+                "système, aucune extrapolation.",
+                "- Ne signale JAMAIS qu'une information est absente ou non "
+                "décrite : supprime purement et simplement la section "
+                "concernée, sans la mentionner.",
+                "- Conserve les termes techniques et noms propres à l'identique.",
+                "- Réponds UNIQUEMENT par le signalement.",
             )),
         },
     },
@@ -116,9 +253,20 @@ def load() -> dict:
     cfg = dict(DEFAULTS)
     if CONFIG_PATH.exists():
         try:
-            cfg.update(json.loads(CONFIG_PATH.read_text(encoding="utf-8")))
+            user = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):
-            pass
+            return cfg
+        for key, value in user.items():
+            # Fusion d'un niveau pour les dictionnaires (« modes »,
+            # « replacements ») : sans cela, une config existante masquerait
+            # définitivement tout nouveau mode livré avec l'application.
+            # Les réglages de l'utilisateur restent prioritaires.
+            if isinstance(value, dict) and isinstance(cfg.get(key), dict):
+                merged = dict(cfg[key])
+                merged.update(value)
+                cfg[key] = merged
+            else:
+                cfg[key] = value
     return cfg
 
 

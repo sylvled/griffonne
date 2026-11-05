@@ -53,6 +53,22 @@ def _clean_name(raw: str) -> str:
     return " ".join(raw.split())
 
 
+def refresh() -> bool:
+    """Force PortAudio à réénumérer les périphériques audio.
+
+    Indispensable : la liste est mise en cache pour toute la durée du
+    processus. Sans cela, un casque allumé APRÈS le démarrage de Griffonne
+    reste invisible, et l'application se rabat sur le micro par défaut."""
+    import sounddevice as sd
+    try:
+        sd._terminate()
+        sd._initialize()
+        return True
+    except Exception as exc:  # noqa: BLE001
+        print(f"[devices] rafraîchissement impossible ({exc!r})")
+        return False
+
+
 def list_microphones() -> list[dict]:
     """Périphériques d'entrée, enrichis : API Windows, débit natif, doublons
     du même micro repérés, entrée recommandée marquée.

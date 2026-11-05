@@ -68,6 +68,38 @@ class SettingsWindow:
             side="left", fill="x", expand=True)
         self.vars[key] = v
 
+    def _fill_mics(self, keep: str | None = None) -> None:
+        """(Re)remplit la liste des micros et signale si celui configuré manque."""
+        mics = list_microphones()
+        labels = ["Défaut système"] + [mic_label(m) for m in mics]
+        self._mic_map = {mic_label(m): m["spec"] for m in mics}  # libellé -> « nom|API »
+        self._mic_combo["values"] = labels
+
+        wanted = keep if keep is not None else self.cfg.get("mic_device")
+        sel, found = "Défaut système", (not wanted)
+        for m in mics:   # identifiant stable, ou ancien index
+            if wanted and (wanted == m["spec"] or wanted == m["index"]):
+                sel, found = mic_label(m), True
+                break
+        self._mic_var.set(sel)
+        if not found:
+            self._mic_status.config(
+                text=f"⚠ Micro configuré « {wanted} » introuvable — appareil "
+                     "éteint ou déconnecté ? Allume-le puis clique "
+                     "« Rafraîchir ». Sans lui, Griffonne écoute le micro par "
+                     "défaut de Windows.", foreground="#b00")
+        else:
+            dflt = next((m for m in mics if m["default"]), None)
+            extra = (f" · défaut Windows : {dflt['clean']}" if dflt else "")
+            self._mic_status.config(
+                text=f"{len(mics)} entrées détectées{extra}", foreground="gray")
+
+    def _refresh_mics(self) -> None:
+        from .devices import refresh
+        refresh()
+        self._fill_mics(keep=self._mic_map.get(self._mic_var.get(),
+                                               self.cfg.get("mic_device")))
+
     def _hotkey_row(self, parent, label, key):
         f = self._row(parent, label)
         v = tk.StringVar(value=str(self.cfg.get(key, "") or ""))
@@ -166,18 +198,22 @@ class SettingsWindow:
 
         # micro
         f = self._row(t, "Micro")
-        mics = list_microphones()
-        labels = ["Défaut système"] + [mic_label(m) for m in mics]
-        self._mic_map = {mic_label(m): m["spec"] for m in mics}   # libellé -> "nom|API"
-        cur = self.cfg.get("mic_device")
-        sel = "Défaut système"
-        for m in mics:   # retrouve la sélection : identifiant stable ou ancien index
-            if cur == m["spec"] or cur == m["index"]:
-                sel = mic_label(m)
-        v = tk.StringVar(value=sel)
-        ttk.Combobox(f, textvariable=v, values=labels,
-                     state="readonly").pack(side="left", fill="x", expand=True)
-        self.vars["mic_device"] = v
+        self._mic_var = tk.StringVar()
+        self._mic_combo = ttk.Combobox(f, textvariable=self._mic_var,
+                                       state="readonly")
+        self._mic_combo.pack(side="left", fill="x", expand=True)
+        ttk.Button(f, text="⟳ Rafraîchir",
+                   command=self._refresh_mics).pack(side="left", padx=4)
+        self.vars["mic_device"] = self._mic_var
+        self._mic_status = ttk.Label(t, text="", foreground="gray",
+                                     wraplength=520)
+        self._mic_status.pack(anchor="w", padx=4)
+        self._fill_mics()
+        ttk.Label(t, text="Un casque allumé après le démarrage n'apparaît qu'après "
+                  "« Rafraîchir ». Préférez l'entrée ★ recommandée (API WASAPI, "
+                  "débit natif, sans rééchantillonnage).",
+                  foreground="gray", wraplength=520).pack(anchor="w", padx=4,
+                                                          pady=(0, 4))
 
         self._hotkey_row(t, "Raccourci dictée", "hotkey")
         self._hotkey_row(t, "Raccourci quitter (vide = aucun)", "quit_hotkey")

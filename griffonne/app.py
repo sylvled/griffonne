@@ -63,6 +63,26 @@ class Griffonne:
         except Exception as exc:  # noqa: BLE001
             print(f"[griffonne] micro : (info indisponible : {exc!r})")
 
+    def _ensure_mic(self) -> None:
+        """Vérifie avant chaque dictée que le micro configuré est bien celui
+        utilisé. Un casque allumé après le démarrage n'est visible qu'après un
+        rafraîchissement de PortAudio (liste mise en cache par processus)."""
+        from .devices import refresh, resolve_mic
+        wanted = self.cfg.get("mic_device")
+        if not wanted:
+            return                      # défaut système : rien à surveiller
+        idx = resolve_mic(wanted)
+        if idx is None:                 # introuvable : il vient peut-être d'être allumé
+            refresh()
+            idx = resolve_mic(wanted)
+        if idx is None:
+            print(f"[griffonne] ⚠️  micro « {wanted} » introuvable (éteint ?) — "
+                  "repli sur le micro par défaut de Windows")
+        elif self.recorder is not None and idx != self.recorder.device:
+            print(f"[griffonne] micro re-détecté → index {idx}")
+            self.recorder = Recorder(device=idx)
+            self._log_mic(idx)
+
     def _cue(self, kind: str) -> None:
         if self.cfg["beep"]:
             play_cue(kind, self.cfg["beep_volume"])
@@ -132,8 +152,22 @@ class Griffonne:
         if not self.cfg["enabled"] or self.backend is None:
             return
         if self.state == IDLE:
+            self._ensure_mic()
             self._set_state(RECORDING)
-            self.recorder.start()
+            try:
+                self.recorder.start()
+            except Exception as exc:  # noqa: BLE001 — périphérique disparu
+                from .devices import refresh, resolve_mic
+                print(f"[griffonne] capture impossible ({exc!r}) — "
+                      "rafraîchissement des périphériques et nouvelle tentative")
+                refresh()
+                self.recorder = Recorder(device=resolve_mic(self.cfg["mic_device"]))
+                try:
+                    self.recorder.start()
+                except Exception as exc2:  # noqa: BLE001
+                    print(f"[griffonne] ❌ micro indisponible : {exc2!r}")
+                    self._set_state(IDLE)
+                    return
             # le chargement du LLM (~4 s à froid) se fait pendant qu'on parle
             if self.backend is not None and hasattr(self.backend, "preload"):
                 self.backend.preload()

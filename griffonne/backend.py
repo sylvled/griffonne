@@ -64,7 +64,8 @@ class LocalBackend:
                 return text
             print(f"[mode] {mode} → réécriture ({len(body.split())} mots dictés)")
             return self.corrector.rewrite(
-                body, spec.get("prompt", ""), model=spec.get("model") or None)
+                body, spec.get("prompt", ""), model=spec.get("model") or None,
+                temperature=float(spec.get("temperature", 0.0)))
 
         if (self.corrector is not None
                 and len(text.split()) >= self.llm_min_words):

@@ -28,16 +28,20 @@ def detect(text: str, cfg: dict) -> tuple[str | None, str]:
     head = _fold(text).split()
     if not head:
         return None, text
-    for name, spec in modes.items():
-        for trig in spec.get("triggers", []):
-            words = _fold(trig).split()
-            if words and head[: len(words)] == words:
-                # retire le déclencheur du texte d'origine (accents, casse et
-                # ponctuation éventuelle : « Mail, » / « E-mail : »)
-                pattern = r"^\W*" + r"\W+".join(
-                    r"\w+" for _ in words) + r"\s*[,.:;!?-]*\s*"
-                body = re.sub(pattern, "", text, count=1).lstrip()
-                return name, (body or text)
+    # déclencheurs les plus longs d'abord : sinon « mail » capterait
+    # « mail soigné », et « compte » capterait « compte rendu ».
+    candidates = [(name, trig) for name, spec in modes.items()
+                  for trig in spec.get("triggers", [])]
+    candidates.sort(key=lambda nt: -len(_fold(nt[1]).split()))
+    for name, trig in candidates:
+        words = _fold(trig).split()
+        if words and head[: len(words)] == words:
+            # retire le déclencheur du texte d'origine (accents, casse et
+            # ponctuation éventuelle : « Mail, » / « E-mail : »)
+            pattern = r"^\W*" + r"\W+".join(
+                r"\w+" for _ in words) + r"\s*[,.:;!?-]*\s*"
+            body = re.sub(pattern, "", text, count=1).lstrip()
+            return name, (body or text)
     return None, text
 
 
