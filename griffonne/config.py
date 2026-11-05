@@ -185,15 +185,27 @@ DEFAULTS = {
             "triggers": ["anglais", "english", "traduction"],
             "model": "",
             "temperature": 0.1,  # fidélité stricte
+            # La consigne de langue est énoncée deux fois, dont la dernière en
+            # position finale : un modèle 3B nourri d'un message français
+            # répondait sinon en français une fois sur trois (mesuré).
             "prompt": "\n".join((
-                "You translate dictated French notes into clear, professional "
-                "English.",
+                "You are a French-to-English translator.",
+                "The user message is in French. Your reply MUST be in English.",
                 "RULES:",
-                "- Keep the meaning and ALL the information. Add nothing.",
+                "- Translate everything. Keep the meaning and ALL the "
+                "information. Add nothing.",
                 "- Keep technical terms, product names and proper nouns "
                 "unchanged.",
-                "- Natural, idiomatic English; no markdown.",
-                "- Answer with the translation ONLY.",
+                # Sans cette règle, « 22h » devenait « 8 PM » : le modèle se
+                # trompe dans la conversion, et une heure fausse est pire
+                # qu'une heure au format inhabituel.
+                "- Keep times in 24-hour format (22h -> 22:00). Never convert "
+                "to AM/PM.",
+                "- Dictated French is colloquial. Translate the intended "
+                "meaning, not word for word: « a lâché », « est tombé », "
+                "« a planté » = failed / went down.",
+                "- Natural, idiomatic English; no markdown, no preamble.",
+                "- Never reply in French. Output English only.",
             )),
         },
         "ticket": {
@@ -249,30 +261,134 @@ DEFAULTS = {
 }
 
 
+# Empreintes SHA-256 des prompts de modes livrés par une version ANTÉRIEURE.
+#
+# Pourquoi : jusqu'ici config.json persistait tous les défauts, donc il a figé
+# les prompts tels qu'ils étaient à la première sauvegarde. Une copie périmée
+# d'un défaut livré est indiscernable d'une personnalisation voulue — sauf si
+# on sait reconnaître ce qu'on a livré. Un prompt dont l'empreinte est ici est
+# effacé au chargement : le défaut courant reprend la main. Un prompt écrit par
+# l'utilisateur ne peut pas figurer dans cette liste, donc il n'est jamais
+# perdu.
+#
+# À l'avenir : `save()` ne persiste plus que les écarts, donc les prompts ne
+# sont plus stockés du tout et cette liste n'a plus à grandir. Elle ne sert
+# qu'à rattraper les fichiers déjà écrits.
+_PROMPTS_SUPPLANTES = {
+    # mode « mail » : version contenant les règles « registre oral → écrit ».
+    # Retirée car le modèle 3B y perdait du contenu — il résumait au lieu de
+    # reformuler, et une phrase entière de la dictée pouvait disparaître.
+    "85bb5be8d96b3e58c0c6f7a78cafa33a09d08eeed40945198f473d77b77418a6",
+    # mode « anglais » : version qui ne disait la langue de sortie qu'une fois.
+    # Le modèle répondait en français environ une fois sur trois.
+    "2e761a2e463cb7aa0b8b505a37d2c372a6d3c69538bfd10bce2849010c17aeff",
+}
+
+
+def _drop_superseded_prompts(user: dict) -> dict:
+    """Retire des modes stockés les prompts que nous avons nous-mêmes livrés
+    dans une version antérieure (voir _PROMPTS_SUPPLANTES)."""
+    modes = user.get("modes")
+    if not isinstance(modes, dict):
+        return user
+    import hashlib
+    out = dict(user)
+    nettoyes = {}
+    for name, spec in modes.items():
+        if not isinstance(spec, dict) or "prompt" not in spec:
+            nettoyes[name] = spec
+            continue
+        digest = hashlib.sha256(
+            str(spec["prompt"]).encode("utf-8")).hexdigest()
+        if digest in _PROMPTS_SUPPLANTES:
+            spec = {k: v for k, v in spec.items() if k != "prompt"}
+            print(f"[config] mode « {name} » : prompt obsolète remplacé "
+                  "par la version livrée")
+        if spec:
+            nettoyes[name] = spec
+    out["modes"] = nettoyes
+    return out
+
+
+def _merge(base: dict, user: dict) -> dict:
+    """Superpose `user` sur `base`, en descendant dans les dictionnaires.
+
+    Récursif, et non pas à un seul niveau : un mode dont l'utilisateur n'a
+    changé que la température doit conserver le prompt livré. Une fusion
+    plate remplacerait le mode entier et gèlerait son prompt."""
+    out = dict(base)
+    for key, value in user.items():
+        current = out.get(key)
+        if isinstance(value, dict) and isinstance(current, dict):
+            out[key] = _merge(current, value)
+        elif isinstance(current, dict) and key in base:
+            # Édition manuelle malformée : remplacer un dictionnaire par un
+            # scalaire ferait planter le code qui l'itère (« modes » devenu
+            # une chaîne = plus aucune dictée, avec une erreur incompréhensible).
+            # On garde le défaut et on le dit.
+            print(f"[config] « {key} » doit être un objet JSON, pas "
+                  f"{type(value).__name__} — valeur ignorée")
+        else:
+            out[key] = value
+    return out
+
+
+def _overrides(cfg: dict, defaults: dict) -> dict:
+    """Ne retient de `cfg` que ce qui s'écarte de `defaults`.
+
+    Pourquoi ne pas tout persister : config.json figerait alors les prompts
+    des modes de dictée tels qu'ils étaient à la première sauvegarde, et
+    aucune de leurs corrections ultérieures n'atteindrait l'utilisateur.
+    En ne stockant que les écarts, un réglage qu'il n'a pas touché continue
+    de suivre la valeur livrée.
+
+    Les clés absentes des défauts sont conservées : ce sont ses propres
+    ajouts (corrections de vocabulaire, mode personnalisé), pas du bruit."""
+    out: dict = {}
+    for key, value in cfg.items():
+        if key not in defaults:
+            out[key] = value
+            continue
+        dflt = defaults[key]
+        if isinstance(value, dict) and isinstance(dflt, dict):
+            sub = _overrides(value, dflt)
+            if sub:
+                out[key] = sub
+        elif value != dflt:
+            out[key] = value
+    return out
+
+
 def load() -> dict:
     cfg = dict(DEFAULTS)
-    if CONFIG_PATH.exists():
+    if not CONFIG_PATH.exists():
+        return cfg
+    try:
+        user = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return cfg
+    if not isinstance(user, dict):
+        return cfg
+    user = _drop_superseded_prompts(user)
+    cfg = _merge(cfg, user)
+    # Migration des fichiers écrits par une version antérieure, qui
+    # persistaient tous les défauts : on réécrit en ne gardant que les
+    # écarts, sinon les prompts livrés restent masqués pour toujours.
+    # Jamais bloquant : un disque en lecture seule ne doit pas empêcher
+    # l'application de démarrer.
+    pruned = _overrides(cfg, DEFAULTS)
+    if pruned != user:
         try:
-            user = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError):
-            return cfg
-        for key, value in user.items():
-            # Fusion d'un niveau pour les dictionnaires (« modes »,
-            # « replacements ») : sans cela, une config existante masquerait
-            # définitivement tout nouveau mode livré avec l'application.
-            # Les réglages de l'utilisateur restent prioritaires.
-            if isinstance(value, dict) and isinstance(cfg.get(key), dict):
-                merged = dict(cfg[key])
-                merged.update(value)
-                cfg[key] = merged
-            else:
-                cfg[key] = value
+            _write(pruned)
+        except OSError as exc:
+            print(f"[config] migration impossible ({exc!r}) — sans conséquence")
     return cfg
 
 
-def save(cfg: dict) -> None:
-    # ne persiste que les clés connues, dans l'ordre des défauts
-    clean = {k: cfg.get(k, v) for k, v in DEFAULTS.items()}
+def _write(data: dict) -> None:
     CONFIG_PATH.write_text(
-        json.dumps(clean, indent=2, ensure_ascii=False), encoding="utf-8"
-    )
+        json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+def save(cfg: dict) -> None:
+    _write(_overrides(cfg, DEFAULTS))
